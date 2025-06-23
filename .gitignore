@@ -39,13 +39,18 @@ Thumbs.db
 # Application specific
 data/
 *.log
-config/*_private.yaml
-config/production.yaml
 
 # Environment variables
 .env
-.env.local
+.env.*
+!.env.example
 
-# Discord tokens (security)
-*token*
-*secret*
+# Private configurations
+config/*_private.yaml
+config/*_production.yaml
+config/secrets.yaml
+
+# Security files
+*.key
+*.pem
+secrets/
