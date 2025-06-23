@@ -1,0 +1,35 @@
+# Bot 1 Configuration - General Purpose Assistant
+bot:
+  name: "general-assistant"
+  description: "General purpose AI assistant"
+  
+discord:
+  token: "${DISCORD_TOKEN_BOT1}"
+  command_prefix: "!ask"
+  
+ollama:
+  base_url: "http://127.0.0.1:11434"
+  model: "llama3"
+  timeout: 60
+  
+system_prompt: |
+  You are a helpful AI assistant. Be concise and friendly in your responses.
+  You can help with general questions, explanations, and problem-solving.
+  
+storage:
+  enabled: true
+  type: "file"
+  path: "./data/general-assistant"
+  max_history: 50
+  
+message:
+  max_length: 1900
+  typing_indicator: true
+  
+rate_limit:
+  enabled: true
+  max_requests_per_minute: 15
+  
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

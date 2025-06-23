@@ -1,0 +1,41 @@
+# Example configuration file for Ollama Discord Bot
+# Copy this file and customize for your bot instance
+
+bot:
+  name: "example-bot"
+  description: "Example bot configuration"
+  
+discord:
+  token: "YOUR_DISCORD_BOT_TOKEN_HERE"
+  command_prefix: "!ask"
+  
+ollama:
+  base_url: "http://127.0.0.1:11434"
+  model: "llama3"
+  timeout: 60
+  
+# System prompt to customize bot behavior
+system_prompt: |
+  You are a helpful AI assistant. Be concise and friendly in your responses.
+  
+# Storage configuration for conversation history
+storage:
+  enabled: true
+  type: "file"  # Currently only 'file' supported
+  path: "./data/{bot_name}"
+  max_history: 50
+  
+# Message handling
+message:
+  max_length: 1900
+  typing_indicator: true
+  
+# Optional: Rate limiting
+rate_limit:
+  enabled: false
+  max_requests_per_minute: 10
+  
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
