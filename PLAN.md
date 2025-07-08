@@ -1,127 +1,160 @@
-# Architecture Simplification Plan
+# Multi-Token Discord Bot Implementation Plan
 
-## Project Status: ✅ Complete
-
-### Current Phase: Phase 0 - Planning
-**Status**: ✅ Complete  
+## Project Status: 🚧 In Progress
 **Started**: 2025-07-08  
-**Completed**: 2025-07-08  
+**Target Completion**: TBD
 
 ## Overview
+This plan addresses the duplicate response issue by implementing support for multiple Discord tokens, allowing each bot personality to have its own Discord application and connection.
 
-This project aims to simplify the ollama-discord bot architecture by removing the dual single/multi-bot modes, improving type safety, and focusing tests on business logic rather than basic functionality.
+## Current Issue
+- All bot personalities (sage, spark, logic) share the same Discord token
+- This creates multiple Discord clients with the same token
+- Discord sends each message to all clients, causing duplicate responses
 
-## Current Issues Identified
-1. **Dual architecture complexity**: Single bot vs multi-bot modes with conditional logic throughout
-2. **Type inconsistencies**: Mix of Pydantic models and plain dicts with manual coercion
-3. **Legacy compatibility layers**: DiscordBot has both old and new code paths
-4. **Test focus**: Tests verify basic functionality rather than business logic
-5. **Attribute checking**: Code uses hasattr() and getattr() instead of proper typing
+## Solution: Multiple Discord Tokens
+Each bot personality will have its own Discord token, creating truly independent bots.
 
 ## Implementation Phases
 
-### Phase 1: Remove Single Bot Mode
+### Phase 0: Documentation and Planning
 **Status**: ✅ Complete  
 **Started**: 2025-07-08  
-**Completed**: 2025-07-08  
-
-**Goals**:
-- Remove single bot CLI options and logic from `main.py`
-- Remove legacy mode from `DiscordBot` class
-- Remove `ConversationStorage` and `RateLimiter` classes (replaced by ports/adapters)
-- Update service scripts to only support multi-bot configs
+**Completed**: 2025-07-08
 
 **Tasks**:
-- [x] Update main.py CLI to only support multi-bot mode
-- [x] Remove legacy storage and rate limiting from DiscordBot
-- [x] Update service installation scripts
-- [x] Convert existing single bot configs to multi-bot format
-- [x] Update tests and ensure they pass
-- [ ] Commit changes
+- [x] Move existing PLAN.md to docs/features/
+- [x] Create debug commands documentation (docs/DEBUG_COMMANDS.md)
+- [x] Create logging configuration documentation (docs/LOGGING_CONFIGURATION.md)
+- [x] Research best practices for multiple tokens in config
+- [x] Design configuration schema for bot-token mapping
+- [x] Create implementation plan
+- [x] Create multi-token setup guide (docs/MULTI_TOKEN_SETUP.md)
 
-### Phase 2: Improve Type Safety
-**Status**: ✅ Complete  
-**Started**: 2025-07-08  
-**Completed**: 2025-07-08  
-
-**Goals**:
-- Make all configs use proper Pydantic models consistently
-- Remove all `hasattr()`, `getattr()`, and manual dict conversion
-- Add proper type hints throughout (enable mypy strict mode)
-- Use dependency injection properly with typed interfaces
-
-**Tasks**:
-- [x] Review and fix type inconsistencies in config handling
-- [x] Remove hasattr/getattr usage in favor of proper typing
-- [x] Enable mypy strict mode and fix all issues
-- [x] Update dependency injection to use typed interfaces
-- [x] Update tests and ensure they pass
-- [ ] Commit changes
-
-### Phase 3: Refactor DiscordBot Class
-**Status**: ✅ Complete  
-**Started**: 2025-07-08  
-**Completed**: 2025-07-08  
+### Phase 1: Configuration Schema Design
+**Status**: 📋 Planned  
 
 **Goals**:
-- Remove legacy storage/rate limiting code
-- Remove conditional orchestrator logic
-- Make orchestrator required (not optional)
-- Simplify message handling flow
+- Design backward-compatible configuration schema
+- Support both single shared token and per-bot tokens
+- Allow environment variables and .env file usage
+
+**Proposed Schema Options**:
+
+Option A: Token in bot config
+```yaml
+bots:
+  - name: "sage"
+    config_file: "sage.yaml"
+    discord_token: "${DISCORD_TOKEN_SAGE}"  # Override token for this bot
+```
+
+Option B: Token mapping section
+```yaml
+discord_tokens:
+  sage: "${DISCORD_TOKEN_SAGE}"
+  spark: "${DISCORD_TOKEN_SPARK}"
+  logic: "${DISCORD_TOKEN_LOGIC}"
+  default: "${DISCORD_TOKEN}"  # Fallback
+
+bots:
+  - name: "sage"
+    config_file: "sage.yaml"
+```
 
 **Tasks**:
-- [x] Clean up DiscordBot constructor and remove optional orchestrator
-- [x] Remove legacy message handling paths
-- [x] Simplify on_message flow
-- [x] Remove unused custom_message_handler complexity
-- [x] Remove unused send_chunked_message method (handled by adapters)
-- [x] Add proper type hints to all methods
-- [x] Update tests and ensure they pass
-- [ ] Commit changes
+- [ ] Evaluate configuration options
+- [ ] Choose best approach
+- [ ] Update configuration models
+- [ ] Add validation for token configuration
 
-### Phase 4: Improve Test Quality
-**Status**: ✅ Complete  
-**Started**: 2025-07-08  
-**Completed**: 2025-07-08  
+### Phase 2: Environment Variable Support
+**Status**: 📋 Planned  
 
 **Goals**:
-- Focus tests on domain logic (coordination, response generation)
-- Remove basic config/initialization tests
-- Add comprehensive business flow tests
-- Test error scenarios and edge cases
+- Support multiple tokens via environment variables
+- Support .env file with multiple tokens
+- Maintain backward compatibility
 
 **Tasks**:
-- [x] Review existing tests and identify business logic vs basic tests
-- [x] Remove/consolidate basic functionality tests
-- [x] Add comprehensive domain logic tests (channel pattern matching, coordination)
-- [x] Add error scenario and edge case tests (command detection, rate limiting)
-- [x] Ensure all tests pass
-- [x] Commit changes
+- [ ] Update .env.example with multiple token examples
+- [ ] Implement token resolution logic
+- [ ] Add validation for missing tokens
+- [ ] Test environment variable loading
 
-### Phase 5: Final Cleanup
-**Status**: ✅ Complete  
-**Started**: 2025-07-08  
-**Completed**: 2025-07-08  
+### Phase 3: Bot Manager Refactoring
+**Status**: 📋 Planned  
+
 **Goals**:
-- Remove unused code and clarify architecture
-- Update documentation to reflect simplified architecture
-- Fix deprecation warnings
+- Update bot manager to use per-bot tokens
+- Ensure each bot uses its configured token
+- Add logging for token usage
 
 **Tasks**:
-- [x] Remove unused imports and classes
-- [x] Remove dead code (message_processor.py and enhanced_message_handler)
-- [x] Update CLAUDE.md documentation to reflect new architecture
-- [x] Fix Pydantic deprecation warnings (migrate to V2 field_validator)
-- [x] Final test run and commit
+- [ ] Update BotManager token handling
+- [ ] Modify bot initialization to use specific tokens
+- [ ] Add debug logging for token assignment
+- [ ] Update error handling for invalid tokens
 
-## Expected Benefits
-- **Simpler architecture**: One way to run bots, clear code paths
-- **Better type safety**: Catch errors at development time
-- **Easier maintenance**: Less conditional logic and edge cases
-- **Better tests**: Focus on actual business requirements
-- **Cleaner code**: Remove legacy compatibility layers
+### Phase 4: Testing and Validation
+**Status**: 📋 Planned  
+
+**Goals**:
+- Test multiple token configuration
+- Verify no duplicate responses
+- Ensure backward compatibility
+
+**Tasks**:
+- [ ] Create test configurations
+- [ ] Test with multiple Discord applications
+- [ ] Verify each bot connects independently
+- [ ] Test error scenarios (missing tokens, invalid tokens)
+- [ ] Update integration tests
+
+### Phase 5: Documentation Updates
+**Status**: 📋 Planned  
+
+**Goals**:
+- Document new configuration options
+- Provide setup guide for multiple Discord applications
+- Update troubleshooting guide
+
+**Tasks**:
+- [ ] Update README.md with multi-token setup
+- [ ] Create Discord application setup guide
+- [ ] Update configuration examples
+- [ ] Add troubleshooting section
+
+## Configuration Best Practices Research
+
+### Environment Variable Arrays
+Common patterns for multiple values:
+1. **Indexed naming**: `DISCORD_TOKEN_1`, `DISCORD_TOKEN_2`
+2. **Named suffixes**: `DISCORD_TOKEN_SAGE`, `DISCORD_TOKEN_SPARK`
+3. **JSON array**: `DISCORD_TOKENS='["token1", "token2"]'`
+4. **Comma-separated**: `DISCORD_TOKENS="token1,token2,token3"`
+
+### Recommendation
+Use named suffixes for clarity and maintainability:
+- `DISCORD_TOKEN_SAGE`
+- `DISCORD_TOKEN_SPARK`
+- `DISCORD_TOKEN_LOGIC`
+
+This approach:
+- Makes it clear which token belongs to which bot
+- Allows easy addition/removal of bots
+- Works well with .env files
+- Is self-documenting
+
+## Success Criteria
+- [ ] Each bot personality can use a different Discord token
+- [ ] No duplicate responses when using multiple tokens
+- [ ] Backward compatible with single token configuration
+- [ ] Clear documentation for setup and configuration
+- [ ] Debug commands show which token each bot is using
 
 ## Notes
-- Each phase includes updating tests and ensuring they pass
-- Each phase ends with a commit
-- PLAN.md is updated throughout the process
+- Maintain backward compatibility for users with single token
+- Provide clear migration guide
+- Consider security implications of multiple tokens
+- Update service files if needed
