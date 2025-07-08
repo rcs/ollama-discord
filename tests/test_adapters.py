@@ -19,6 +19,7 @@ class TestFileMessageStorage:
         """Create temporary storage for testing."""
         with tempfile.TemporaryDirectory() as temp_dir:
             conv_state = ConversationState(
+                bot_name="test-bot",
                 storage_path=temp_dir,
                 context_depth=10,
                 max_history=100

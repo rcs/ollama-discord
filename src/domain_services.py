@@ -175,17 +175,13 @@ class MessageCoordinator:
 class ResponseGenerator:
     """Generates responses using AI models."""
     
-    def __init__(self, ai_model: AIModel, storage: MessageStorage):
+    def __init__(self, ai_model: AIModel, storage: MessageStorage, 
+                 system_prompt: str, bot_name: str = None):
         self.ai_model = ai_model
         self.storage = storage
+        self.bot_name = bot_name
+        self.system_prompt = system_prompt
         self.logger = logging.getLogger(__name__)
-        
-        # Bot-specific system prompts
-        self.system_prompts = {
-            'sage': "You are Sage, a wise and thoughtful mentor who helps others think deeply about life's questions. Respond with wisdom, patience, and gentle guidance.",
-            'spark': "You are Spark, a creative and innovative companion who loves brainstorming, creative projects, and inspiring new ideas. Respond with enthusiasm and creativity.",
-            'logic': "You are Logic, an analytical and systematic thinker who excels at research, problem-solving, and data analysis. Respond with clarity and logical reasoning."
-        }
     
     async def generate_response(self, bot_name: str, message_content: str, 
                                channel_id: int, user_id: int) -> str:
@@ -210,13 +206,13 @@ class ResponseGenerator:
             raise  # Re-raise the exception so orchestrator can handle it
     
     def _build_message_history(self, bot_name: str, context: ConversationContext, 
-                              current_message: str) -> List[Dict[str, str]]:
+                               current_message: str) -> List[Dict[str, str]]:
         """Build message history for AI model."""
         messages = []
         
         # Add system prompt
-        if bot_name in self.system_prompts:
-            messages.append({"role": "system", "content": self.system_prompts[bot_name]})
+        if self.system_prompt:
+            messages.append({"role": "system", "content": self.system_prompt})
         
         # Add recent conversation context
         if context.messages:
@@ -229,19 +225,27 @@ class ResponseGenerator:
         # Add current message
         messages.append({"role": "user", "content": current_message})
         
+        # DEBUG: Log the complete prompt being sent to AI
+        self.logger.debug(f"🔍 [{bot_name}] FULL PROMPT TO AI:")
+        for i, msg in enumerate(messages):
+            role_emoji = {"system": "⚙️", "user": "👤", "assistant": "🤖"}.get(msg["role"], "❓")
+            content_preview = msg["content"][:200] + "..." if len(msg["content"]) > 200 else msg["content"]
+            self.logger.debug(f"  {i+1}. {role_emoji} {msg['role'].upper()}: {content_preview}")
+        
         return messages
-
 
 class BotOrchestrator:
     """Orchestrates the complete bot message processing flow."""
     
     def __init__(self, coordinator: MessageCoordinator, response_generator: ResponseGenerator, 
-                 storage: MessageStorage, rate_limiter: RateLimiter, notification_sender: NotificationSender):
+                 storage: MessageStorage, rate_limiter: RateLimiter, notification_sender: NotificationSender,
+                 bot_name: str = None):
         self.coordinator = coordinator
         self.response_generator = response_generator
         self.storage = storage
         self.rate_limiter = rate_limiter
         self.notification_sender = notification_sender
+        self.bot_name = bot_name
         self.logger = logging.getLogger(__name__)
     
     async def process_message(self, bot_name: str, message: discord.Message, 
@@ -250,10 +254,14 @@ class BotOrchestrator:
         channel_id = message.channel.id
         message_id = str(message.id)
         
+        # DEBUG: Log message processing start
+        self.logger.debug(f"🔄 [{bot_name}] PROCESSING MESSAGE: ID={message_id}, Author={message.author.display_name}, Channel=#{message.channel.name}, Content='{message.content[:100]}...'")
+        
         try:
             # Check for debug commands first
             debug_response = await debug_handler.handle_debug_command(message, bot_name)
             if debug_response:
+                self.logger.debug(f"🛠️ [{bot_name}] DEBUG COMMAND HANDLED: {message_id}")
                 await self.notification_sender.send_message(message.channel, debug_response)
                 return True
             

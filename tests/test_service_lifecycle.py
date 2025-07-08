@@ -46,9 +46,9 @@ class TestServiceCreation:
     def test_create_multi_bot_services_with_multiple_bots(self):
         """Test creating services with multiple bots."""
         bot_configs = [
-            BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token", channels=["general"]),
-            BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token", channels=["test"]),
-            BotInstanceConfig(name="bot3", config_file="bot3.yaml", discord_token="fake_token", channels=["dev"])
+            BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token_1", channels=["general"]),
+            BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token_2", channels=["test"]),
+            BotInstanceConfig(name="bot3", config_file="bot3.yaml", discord_token="fake_token_3", channels=["dev"])
         ]
         
         multi_config = MultiBotConfig(
@@ -131,6 +131,7 @@ class TestBotManagerLifecycle:
                 {
                     'name': bot_name,
                     'config_file': str(bot_config_file),
+                    'discord_token': 'fake_token_lifecycle',
                     'channels': ['lifecycle-test']
                 }
             ],
@@ -155,7 +156,6 @@ class TestBotManagerLifecycle:
         manager = BotManager(str(multi_config_file))
         
         # Before initialization - these attributes are declared but not set
-        assert manager.conversation_state is None
         assert len(manager.bot_instances) == 0
         
         # Initialize
@@ -163,7 +163,7 @@ class TestBotManagerLifecycle:
         
         # After initialization
         assert manager.multi_bot_config is not None
-        assert manager.conversation_state is not None
+        assert manager.bot_services['lifecycle-bot'].conversation_state is not None
         assert len(manager.bot_instances) == 1
         assert 'lifecycle-bot' in manager.bot_instances
         
@@ -185,11 +185,11 @@ class TestBotManagerLifecycle:
         # Initialize multiple times
         await manager.initialize()
         first_config = manager.multi_bot_config
-        first_state = manager.conversation_state
+        first_state = manager.bot_services['lifecycle-bot'].conversation_state
         
         await manager.initialize()
         second_config = manager.multi_bot_config
-        second_state = manager.conversation_state
+        second_state = manager.bot_services['lifecycle-bot'].conversation_state
         
         # Should have new instances (re-initialization)
         assert second_config is not first_config
@@ -218,7 +218,7 @@ class TestBotManagerLifecycle:
             # Verify bot is started
             assert bot_instance.is_running is True
             assert bot_instance.bot is mock_bot
-            mock_client.start.assert_called_once_with('test-token')
+            mock_client.start.assert_called_once_with('fake_token_lifecycle')
             
             # Stop bot
             await manager._stop_bot(bot_instance)
@@ -275,6 +275,7 @@ class TestBotManagerLifecycle:
             bot_configs.append({
                 'name': bot_name,
                 'config_file': str(bot_config_file),
+                'discord_token': f'fake_token_{i+1}',
                 'channels': [f'channel{i+1}']
             })
         
@@ -494,9 +495,10 @@ class TestServiceDependencyInjection:
         assert response_generator.ai_model is not None
         # Storage path may be converted to Path object and normalized, so compare resolved paths
         from pathlib import Path
-        expected_path = Path(multi_config.global_settings.storage_path).resolve()
-        actual_path = Path(conversation_state.storage_path).resolve()
-        assert actual_path == expected_path
+        # For multi-bot configs, storage path includes the bot name
+        expected_path = Path(multi_config.global_settings.storage_path) / "dependency-bot"
+        actual_path = Path(conversation_state.storage_path)
+        assert actual_path.resolve() == expected_path.resolve()
     
     def test_service_circular_dependencies(self):
         """Test handling of circular service dependencies."""
@@ -578,6 +580,7 @@ class TestServiceResourceManagement:
                 {
                     'name': 'resource-bot',
                     'config_file': str(bot_config_file),
+                    'discord_token': 'fake_token_resource',
                     'channels': ['resource-test']
                 }
             ],
@@ -601,7 +604,7 @@ class TestServiceResourceManagement:
         
         # Verify objects are created
         assert manager.multi_bot_config is not None
-        assert manager.conversation_state is not None
+        assert manager.bot_services['resource-bot'].conversation_state is not None
         assert len(manager.bot_instances) > 0
         
         # Clean up and verify objects can be garbage collected
@@ -609,14 +612,14 @@ class TestServiceResourceManagement:
         
         # Objects should still exist until manager is destroyed
         assert manager.multi_bot_config is not None
-        assert manager.conversation_state is not None
+        assert manager.bot_services['resource-bot'].conversation_state is not None
         
         # Re-initialize should work
         await manager.initialize()
         
         # Should have new instances
         assert manager.multi_bot_config is not None
-        assert manager.conversation_state is not None
+        assert manager.bot_services['resource-bot'].conversation_state is not None
 
 
 if __name__ == "__main__":

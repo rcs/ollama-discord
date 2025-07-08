@@ -135,6 +135,7 @@ class TestMultiBotConfigurationLoading:
                 {
                     'name': 'test-bot',
                     'config_file': str(bot_config_file),
+                    'discord_token': 'fake_token_123',
                     'channels': ['general', 'test']
                 }
             ],
@@ -162,6 +163,7 @@ class TestMultiBotConfigurationLoading:
                 {
                     'name': 'test-bot',
                     'config_file': 'nonexistent.yaml',
+                    'discord_token': 'fake_token_123',
                     'channels': ['general']
                 }
             ],
@@ -210,6 +212,7 @@ class TestMultiBotConfigurationLoading:
                 {
                     'name': 'invalid-bot',
                     'config_file': str(bot_config_file),
+                    'discord_token': 'fake_token_123',
                     'channels': ['general']
                 }
             ],
@@ -253,6 +256,7 @@ class TestConfigurationPathResolution:
                 {
                     'name': 'test-bot',
                     'config_file': './config/bot.yaml',
+                    'discord_token': 'fake_token_123',
                     'channels': ['general']
                 }
             ],
@@ -295,6 +299,7 @@ class TestConfigurationPathResolution:
                 {
                     'name': 'test-bot',
                     'config_file': str(bot_config_file),  # Absolute path
+                    'discord_token': 'fake_token_123',
                     'channels': ['general']
                 }
             ],
@@ -336,6 +341,7 @@ class TestBotManagerConfigurationIntegration:
                 {
                     'name': 'integration-bot',
                     'config_file': str(bot_config_file),
+                    'discord_token': 'fake_token_123',
                     'channels': ['integration-test']
                 }
             ],

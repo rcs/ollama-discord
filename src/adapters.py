@@ -7,6 +7,7 @@ from datetime import datetime
 from .ports import MessageStorage, AIModel, RateLimiter, NotificationSender
 from .conversation_state import ConversationState, ConversationMessage, ConversationContext
 from .bot import format_message_for_discord
+from .sqlite_storage import SQLiteMessageStorage
 
 
 class FileMessageStorage(MessageStorage):

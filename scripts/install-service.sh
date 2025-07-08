@@ -137,6 +137,30 @@ follow_logs() {
     journalctl --user -u "$SERVICE_NAME.service" -f
 }
 
+# Function to restart service
+restart_service() {
+    print_status "Restarting Ollama Discord Bot service..."
+    
+    # Check if service exists
+    if ! systemctl --user list-unit-files "$SERVICE_NAME.service" &>/dev/null; then
+        print_error "Service is not installed. Use 'install' command first."
+        exit 1
+    fi
+    
+    # Restart service
+    systemctl --user restart "$SERVICE_NAME.service"
+    print_status "Service restarted"
+    
+    # Check status
+    sleep 2  # Give service a moment to start
+    if systemctl --user is-active --quiet "$SERVICE_NAME.service"; then
+        print_status "Service is running successfully!"
+    else
+        print_error "Service failed to start after restart. Check logs with: $0 logs"
+        exit 1
+    fi
+}
+
 # Function to show help
 show_help() {
     echo "Ollama Discord Bot Service Management"
@@ -146,6 +170,7 @@ show_help() {
     echo "Commands:"
     echo "  install [--dev]  Install and start the service"
     echo "  uninstall        Stop and remove the service"
+    echo "  restart          Restart the service"
     echo "  status           Show service status"
     echo "  logs             Show recent service logs"
     echo "  follow           Follow service logs in real-time"
@@ -158,6 +183,7 @@ show_help() {
     echo "Examples:"
     echo "  $0 install           # Install production service"
     echo "  $0 install --dev     # Install development service with auto-restart"
+    echo "  $0 restart           # Restart the service"
     echo "  $0 status            # Check if service is running"
     echo "  $0 logs              # View recent log entries"
     echo ""
@@ -175,6 +201,9 @@ case "$1" in
         ;;
     uninstall)
         uninstall_service
+        ;;
+    restart)
+        restart_service
         ;;
     status)
         show_status

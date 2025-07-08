@@ -107,13 +107,13 @@ class TestMessageProcessingIntegration:
         mock_ai_response = "Hello! I'm here to help."
         
         # Mock the AI model to return our test response
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, return_value=mock_ai_response):
             # Mock the notification sender
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock) as mock_send:
                 # Process the message
-                result = await manager.orchestrator.process_message(
+                result = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", message, ["message-test"]
                 )
                 
@@ -141,24 +141,24 @@ class TestMessageProcessingIntegration:
         message2 = self.create_mock_message("Second message", author_id=12345)
         
         # Mock AI responses
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, return_value="Test response"):
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock) as mock_send:
                 
                 # Process first message - should succeed
-                result1 = await manager.orchestrator.process_message(
+                result1 = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", message1, ["message-test"]
                 )
                 assert result1 is True
                 
                 # Set up rate limiting to reject second message
-                manager.orchestrator.rate_limiter.requests = {}  # Reset for test
-                manager.orchestrator.rate_limiter.max_requests_per_minute = 1
-                manager.orchestrator.rate_limiter.record_request(str(message1.author.id))
+                manager.bot_services['test-bot'].orchestrator.rate_limiter.requests = {}  # Reset for test
+                manager.bot_services['test-bot'].orchestrator.rate_limiter.max_requests_per_minute = 1
+                manager.bot_services['test-bot'].orchestrator.rate_limiter.record_request(str(message1.author.id))
                 
                 # Process second message - should be rate limited
-                result2 = await manager.orchestrator.process_message(
+                result2 = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", message2, ["message-test"]
                 )
                 assert result2 is False
@@ -183,13 +183,13 @@ class TestMessageProcessingIntegration:
         mock_ai_response = "Python is a programming language."
         
         # Mock the AI model
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, return_value=mock_ai_response):
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock):
                 
                 # Process the message
-                result = await manager.orchestrator.process_message(
+                result = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", message, ["message-test"]
                 )
                 
@@ -197,7 +197,7 @@ class TestMessageProcessingIntegration:
                 assert result is True
                 
                 # Verify message was stored in conversation state
-                context = await manager.conversation_state.get_context(
+                context = await manager.bot_services['test-bot'].conversation_state.get_context(
                     message.channel.id, message.author.id
                 )
                 
@@ -236,13 +236,13 @@ class TestMessageProcessingIntegration:
         message = self.create_mock_message("Cause an error")
         
         # Mock AI model to raise an exception
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, side_effect=Exception("AI model error")):
-            with patch.object(manager.orchestrator.notification_sender, 'send_message', 
+            with patch.object(manager.bot_services['test-bot'].orchestrator.notification_sender, 'send_message', 
                              new_callable=AsyncMock) as mock_error_send:
                 
                 # Process the message - should handle error gracefully
-                result = await manager.orchestrator.process_message(
+                result = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", message, ["message-test"]
                 )
                 
@@ -272,19 +272,19 @@ class TestMessageProcessingIntegration:
                                                   channel_name="blocked-channel")
         
         # Mock AI responses
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, return_value="Test response"):
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock) as mock_send:
                 
                 # Process message from allowed channel - should succeed
-                result1 = await manager.orchestrator.process_message(
+                result1 = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", allowed_message, ["message-test"]
                 )
                 assert result1 is True
                 
                 # Process message from blocked channel - should be filtered
-                result2 = await manager.orchestrator.process_message(
+                result2 = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", blocked_message, ["message-test"]
                 )
                 assert result2 is False
@@ -306,20 +306,20 @@ class TestMessageProcessingIntegration:
         message = self.create_mock_message("Test coordination")
         
         # Mock AI responses
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, return_value="Test response"):
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock) as mock_send:
                 
                 # Simulate multiple bots trying to respond simultaneously
                 channel_id = message.channel.id
                 
                 # First bot starts responding
-                await manager.orchestrator.coordinator.mark_bot_responding("bot1", channel_id)
-                await manager.orchestrator.coordinator.mark_bot_responding("bot2", channel_id)
+                await manager.bot_services['test-bot'].orchestrator.coordinator.mark_bot_responding("bot1", channel_id)
+                await manager.bot_services['test-bot'].orchestrator.coordinator.mark_bot_responding("bot2", channel_id)
                 
                 # Third bot should be blocked due to max_concurrent_responses = 2
-                should_coordinate = await manager.orchestrator.coordinator._should_coordinate_response(
+                should_coordinate = await manager.bot_services['test-bot'].orchestrator.coordinator._should_coordinate_response(
                     "bot3", message
                 )
                 
@@ -327,10 +327,10 @@ class TestMessageProcessingIntegration:
                 assert should_coordinate is True
                 
                 # Complete one response
-                await manager.orchestrator.coordinator.mark_response_complete("bot1", channel_id)
+                await manager.bot_services['test-bot'].orchestrator.coordinator.mark_response_complete("bot1", channel_id)
                 
                 # Now bot3 should be able to respond
-                should_coordinate = await manager.orchestrator.coordinator._should_coordinate_response(
+                should_coordinate = await manager.bot_services['test-bot'].orchestrator.coordinator._should_coordinate_response(
                     "bot3", message
                 )
                 assert should_coordinate is False
@@ -350,19 +350,19 @@ class TestMessageProcessingIntegration:
         regular_message = self.create_mock_message("Hello bot", channel_name="message-test")
         
         # Mock AI responses
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, return_value="Test response"):
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock) as mock_send:
                 
                 # Process command message - should be filtered
-                result1 = await manager.orchestrator.process_message(
+                result1 = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", command_message, ["message-test"]
                 )
                 assert result1 is False
                 
                 # Process regular message - should succeed
-                result2 = await manager.orchestrator.process_message(
+                result2 = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", regular_message, ["message-test"]
                 )
                 assert result2 is True
@@ -385,19 +385,19 @@ class TestMessageProcessingIntegration:
         user_message = self.create_mock_message("I am a user", channel_name="message-test", is_bot=False)
         
         # Mock AI responses
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, return_value="Test response"):
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock) as mock_send:
                 
                 # Process bot message - should be filtered
-                result1 = await manager.orchestrator.process_message(
+                result1 = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", bot_message, ["message-test"]
                 )
                 assert result1 is False
                 
                 # Process user message - should succeed
-                result2 = await manager.orchestrator.process_message(
+                result2 = await manager.bot_services['test-bot'].orchestrator.process_message(
                     "message-bot", user_message, ["message-test"]
                 )
                 assert result2 is True

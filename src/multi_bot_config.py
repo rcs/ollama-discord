@@ -77,6 +77,8 @@ class GlobalSettings(BaseModel):
     cooldown_period: int = Field(default=30, ge=5, le=300)
     conversation_timeout: int = Field(default=3600, ge=60)  # seconds
     storage_path: str = Field(default="./data/multi_bot_conversations")
+    storage_type: str = Field(default="file", pattern="^(file|sqlite)$")  # file or sqlite
+    session_timeout: int = Field(default=3600, ge=60)  # seconds for SQLite sessions
     enable_cross_bot_context: bool = True
     enable_bot_mentions: bool = True
     debug_mode: bool = False

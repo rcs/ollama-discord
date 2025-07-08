@@ -133,10 +133,10 @@ class TestEndToEndIntegration:
         # Verify all components are initialized
         assert manager.multi_bot_config is not None
         assert len(manager.multi_bot_config.bots) == 3
-        assert manager.conversation_state is not None
-        assert manager.orchestrator is not None
-        assert manager.coordinator is not None
-        assert manager.response_generator is not None
+        assert manager.bot_services['test-bot-1'].conversation_state is not None
+        assert manager.bot_services['test-bot-1'].orchestrator is not None
+        assert manager.shared_coordinator is not None
+        assert manager.bot_services['test-bot-1'].response_generator is not None
         
         # Verify all bot instances are created
         assert len(manager.bot_instances) == 3
@@ -210,9 +210,9 @@ class TestEndToEndIntegration:
             "test-bot-3": "Hello! I'm bot 3."
         }
         
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot-1'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock) as mock_ai:
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot-1'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock) as mock_send:
                 
                 # Configure mock to return different responses
@@ -221,7 +221,7 @@ class TestEndToEndIntegration:
                 )
                 
                 # Test bot 1 processing message from channel-1
-                result1 = await manager.orchestrator.process_message(
+                result1 = await manager.bot_services['test-bot-1'].orchestrator.process_message(
                     "test-bot-1", message1, ["channel-1", "shared-channel"]
                 )
                 assert result1 is True
@@ -230,7 +230,7 @@ class TestEndToEndIntegration:
                 mock_ai.side_effect = lambda msgs: responses.get(
                     "test-bot-2", "Default response"
                 )
-                result2 = await manager.orchestrator.process_message(
+                result2 = await manager.bot_services['test-bot-1'].orchestrator.process_message(
                     "test-bot-2", message2, ["channel-2", "shared-channel"]
                 )
                 assert result2 is True
@@ -239,7 +239,7 @@ class TestEndToEndIntegration:
                 mock_ai.side_effect = lambda msgs: responses.get(
                     "test-bot-3", "Default response"
                 )
-                result3 = await manager.orchestrator.process_message(
+                result3 = await manager.bot_services['test-bot-1'].orchestrator.process_message(
                     "test-bot-3", message3, ["shared-channel"]
                 )
                 assert result3 is True
@@ -268,25 +268,25 @@ class TestEndToEndIntegration:
         message2.channel.id = channel_id
         
         # Mock AI responses
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot-1'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock) as mock_ai:
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot-1'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock):
                 
                 # First message
                 mock_ai.return_value = "Python is a programming language."
-                await manager.orchestrator.process_message(
+                await manager.bot_services['test-bot-1'].orchestrator.process_message(
                     "test-bot-1", message1, ["test-channel"]
                 )
                 
                 # Second message
                 mock_ai.return_value = "Python is great for data science and web development."
-                await manager.orchestrator.process_message(
+                await manager.bot_services['test-bot-1'].orchestrator.process_message(
                     "test-bot-1", message2, ["test-channel"]
                 )
                 
                 # Verify conversation state
-                context = await manager.conversation_state.get_context(channel_id, user_id)
+                context = await manager.bot_services['test-bot-1'].conversation_state.get_context(channel_id, user_id)
                 
                 # Should have 4 messages: 2 user messages + 2 bot responses
                 assert len(context.messages) >= 4
@@ -318,9 +318,9 @@ class TestEndToEndIntegration:
         message = self.create_mock_message("Test coordination", "shared-channel")
         
         # Mock AI response
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot-1'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, return_value="Test response"):
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot-1'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock) as mock_send:
                 
                 # Simulate multiple bots trying to respond to same message
@@ -328,7 +328,7 @@ class TestEndToEndIntegration:
                 for i in range(3):
                     bot_name = f"test-bot-{i+1}"
                     task = asyncio.create_task(
-                        manager.orchestrator.process_message(
+                        manager.bot_services['test-bot-1'].orchestrator.process_message(
                             bot_name, message, ["shared-channel"]
                         )
                     )
@@ -361,13 +361,13 @@ class TestEndToEndIntegration:
         message = self.create_mock_message("Cause an error", "test-channel")
         
         # Test AI model error handling
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot-1'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock, side_effect=Exception("AI model failed")):
-            with patch.object(manager.orchestrator.notification_sender, 'send_message', 
+            with patch.object(manager.bot_services['test-bot-1'].orchestrator.notification_sender, 'send_message', 
                              new_callable=AsyncMock) as mock_error_send:
                 
                 # Process message - should handle error gracefully
-                result = await manager.orchestrator.process_message(
+                result = await manager.bot_services['test-bot-1'].orchestrator.process_message(
                     "test-bot-1", message, ["test-channel"]
                 )
                 
@@ -380,15 +380,15 @@ class TestEndToEndIntegration:
                 assert "error" in error_args[1].lower()
         
         # Test storage error handling
-        with patch.object(manager.conversation_state, 'add_message', 
+        with patch.object(manager.bot_services['test-bot-1'].conversation_state, 'add_message', 
                          new_callable=AsyncMock, side_effect=Exception("Storage failed")):
-            with patch.object(manager.response_generator.ai_model, 'generate_response', 
+            with patch.object(manager.bot_services['test-bot-1'].response_generator.ai_model, 'generate_response', 
                              new_callable=AsyncMock, return_value="Test response"):
-                with patch.object(manager.orchestrator.notification_sender, 'send_message', 
+                with patch.object(manager.bot_services['test-bot-1'].orchestrator.notification_sender, 'send_message', 
                                  new_callable=AsyncMock) as mock_error_send:
                     
                     # Process message - should handle storage error
-                    result = await manager.orchestrator.process_message(
+                    result = await manager.bot_services['test-bot-1'].orchestrator.process_message(
                         "test-bot-1", message, ["test-channel"]
                     )
                     
@@ -452,25 +452,25 @@ class TestEndToEndIntegration:
         message2.channel.id = channel_id
         
         # Mock AI responses
-        with patch.object(manager.response_generator.ai_model, 'generate_response', 
+        with patch.object(manager.bot_services['test-bot-1'].response_generator.ai_model, 'generate_response', 
                          new_callable=AsyncMock) as mock_ai:
-            with patch.object(manager.orchestrator.notification_sender, 'send_chunked_message', 
+            with patch.object(manager.bot_services['test-bot-1'].orchestrator.notification_sender, 'send_chunked_message', 
                              new_callable=AsyncMock):
                 
                 # Bot 1 responds
                 mock_ai.return_value = "Hi! I'm bot 1."
-                await manager.orchestrator.process_message(
+                await manager.bot_services['test-bot-1'].orchestrator.process_message(
                     "test-bot-1", message1, ["shared-channel"]
                 )
                 
                 # Bot 2 responds
                 mock_ai.return_value = "Hi! I'm bot 2."
-                await manager.orchestrator.process_message(
+                await manager.bot_services['test-bot-1'].orchestrator.process_message(
                     "test-bot-2", message2, ["shared-channel"]
                 )
                 
                 # Verify shared context
-                context = await manager.conversation_state.get_context(channel_id, user_id)
+                context = await manager.bot_services['test-bot-1'].conversation_state.get_context(channel_id, user_id)
                 
                 # Should have messages from both bots
                 bot_messages = [msg for msg in context.messages if msg.role == 'assistant']

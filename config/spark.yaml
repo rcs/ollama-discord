@@ -68,7 +68,3 @@ message:
 rate_limit:
   enabled: true
   max_requests_per_minute: 12
-
-logging:
-  level: "INFO"
-  format: "%(asctime)s - [SPARK] %(levelname)s - %(message)s"

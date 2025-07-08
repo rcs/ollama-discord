@@ -1,8 +1,47 @@
 # Multi-Token Discord Bot Implementation Plan
 
-## Project Status: ✅ Complete
+## Project Status: 🔄 In Progress
+**Started**: 2025-07-08  
+**Current Phase**: Test & Type Fixing + Storage Migration
+
+## Immediate Stages (Priority 1)
+
+### Stage 1: ✅ Test & Type Fixing
+**Status**: ✅ Complete  
 **Started**: 2025-07-08  
 **Completed**: 2025-07-08
+
+**Goals**:
+- Fix all failing tests to ensure code stability
+- Resolve all type checking errors for better code quality
+- Prepare codebase for storage migration
+
+**Tasks**:
+- [x] Fix BotManager test expectations to match new architecture
+- [x] Update test assertions to use bot-specific services
+- [x] Resolve type annotations in bot_manager.py
+- [x] Install missing type stubs (types-PyYAML, types-requests)
+- [x] Fix Optional type annotations for better type safety
+
+### Stage 2: 📋 Storage Migration to SQLite
+**Status**: 📋 Planned  
+**Priority**: High
+
+**Goals**:
+- Migrate from file-based storage to SQLite database
+- Improve performance and concurrency
+- Maintain bot isolation principles
+- Add proper session management
+
+**Tasks**:
+- [ ] Design SQLite schema for bot-specific conversation storage
+- [ ] Implement SQLiteStorage adapter
+- [ ] Create migration script from file storage
+- [ ] Update ConversationState to use SQLite
+- [ ] Add database connection pooling
+- [ ] Implement proper session management
+- [ ] Update tests for SQLite storage
+- [ ] Add database backup/restore functionality
 
 ## Overview
 This plan addresses the duplicate response issue by implementing support for multiple Discord tokens, allowing each bot personality to have its own Discord application and connection.
@@ -116,7 +155,66 @@ bots:
 - [x] Verify no duplicate responses in Discord
 - [x] Update integration tests
 
-### Phase 5: Documentation Updates
+### Phase 5: Per-Bot Conversation History Isolation
+**Status**: ✅ Complete  
+**Started**: 2025-07-08  
+**Completed**: 2025-07-08
+
+**Goals**:
+- Refactor conversation storage to be per-bot instead of shared
+- Eliminate duplicate messages in conversation history
+- Ensure complete context isolation between bots
+- Remove unused shared state code
+
+**Problem**: Currently all bots share the same conversation history, causing:
+- Duplicate messages when multiple bots process the same message
+- Bots seeing each other's responses in their context
+- AI models thinking users are repeating themselves
+
+**Solution**: Each bot maintains its own isolated conversation history:
+```
+Current: data/multi_bot_conversations/channel_123_user_456.json (shared)
+New:     data/multi_bot_conversations/sage/channel_123_user_456.json
+         data/multi_bot_conversations/spark/channel_123_user_456.json
+         data/multi_bot_conversations/logic/channel_123_user_456.json
+```
+
+**Tasks**:
+- [x] **Phase 5.1**: Service Isolation
+  - [x] Modify `ConversationState` to accept `bot_name` parameter
+  - [x] Update storage paths to include bot name
+  - [x] Create `create_bot_services()` function in service factory
+  - [x] Remove `create_multi_bot_services()` function
+  - [x] Update `BotManager` to use per-bot services
+- [x] **Phase 5.2**: Remove Shared State
+  - [x] Update `ResponseGenerator` to accept system prompt as parameter
+  - [x] Remove hardcoded bot prompts dictionary
+  - [x] Update `DiscordBot` to use bot-specific services
+  - [x] Clean up unused shared state code
+- [x] **Phase 5.3**: Testing & Validation
+  - [x] Create unit tests for conversation state isolation
+  - [x] Create integration tests for context isolation
+  - [x] Create context leakage prevention tests
+  - [x] Verify no cross-bot data access
+
+**Architecture Changes**:
+```python
+@dataclass
+class BotServices:
+    orchestrator: BotOrchestrator
+    response_generator: ResponseGenerator
+    storage: FileMessageStorage
+    conversation_state: ConversationState
+
+# Each bot gets isolated services
+bot_services: Dict[str, BotServices] = {
+    "sage": create_bot_services("sage", sage_config, ...),
+    "spark": create_bot_services("spark", spark_config, ...),
+    "logic": create_bot_services("logic", logic_config, ...)
+}
+```
+
+### Phase 6: Documentation Updates
 **Status**: 📋 Planned  
 
 **Goals**:
