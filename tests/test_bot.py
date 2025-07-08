@@ -1,37 +1,34 @@
 import pytest
-from src.bot import Bot
-from src.config import Config
+from unittest.mock import Mock
+from src.bot import DiscordBot
+from src.config import Config, BotConfig, DiscordConfig, OllamaConfig
 
 
-class TestBot:
-    """Test cases for the Bot class."""
+class TestDiscordBot:
+    """Test cases for the DiscordBot class."""
     
     def test_bot_initialization(self):
         """Test that bot can be initialized with config."""
-        config = Config()
-        bot = Bot(config)
+        config = Config(
+            bot=BotConfig(name="test-bot"),
+            discord=DiscordConfig(token="test-token"),
+            ollama=OllamaConfig()
+        )
+        bot = DiscordBot(config)
         assert bot is not None
         assert bot.config == config
-    
-    def test_bot_config_validation(self):
-        """Test that bot validates config properly."""
-        config = Config()
-        # This should not raise an exception
-        bot = Bot(config)
-        assert bot is not None
 
 
 class TestConfig:
     """Test cases for the Config class."""
     
     def test_config_creation(self):
-        """Test that config can be created."""
-        config = Config()
+        """Test that config can be created with required fields."""
+        config = Config(
+            bot=BotConfig(name="test-bot"),
+            discord=DiscordConfig(token="test-token"),
+            ollama=OllamaConfig()
+        )
         assert config is not None
-    
-    def test_config_defaults(self):
-        """Test that config has expected default values."""
-        config = Config()
-        # Add assertions for expected default values
-        assert hasattr(config, 'discord_token')
-        assert hasattr(config, 'ollama_url') 
+        assert config.bot.name == "test-bot"
+        assert config.discord.token == "test-token" 
