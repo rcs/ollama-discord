@@ -12,6 +12,7 @@ import discord
 import requests
 
 from .config import Config, setup_logging
+from .domain_services import BotOrchestrator
 
 
 def format_message_for_discord(content: str, max_length: int = 2000) -> List[str]:
@@ -204,12 +205,18 @@ class RateLimiter:
 class DiscordBot:
     """Discord bot with Ollama integration and configuration support."""
     
-    def __init__(self, config: Config, custom_message_handler=None):
+    def __init__(self, config: Config, orchestrator: Optional[BotOrchestrator] = None, 
+                 custom_message_handler=None, channel_patterns: Optional[List[str]] = None):
         self.config = config
         self.logger = setup_logging(config.logging, config.bot.name)
-        self.storage = ConversationStorage(config)
-        self.rate_limiter = RateLimiter(config)
+        self.orchestrator = orchestrator
         self.custom_message_handler = custom_message_handler
+        self.channel_patterns = channel_patterns or []
+        
+        # Legacy components for backwards compatibility
+        if not orchestrator:
+            self.storage = ConversationStorage(config)
+            self.rate_limiter = RateLimiter(config)
         
         # Setup Discord client
         intents = discord.Intents.default()
@@ -235,6 +242,14 @@ class DiscordBot:
             if handled:
                 return
         
+        # Use orchestrator if available (new architecture)
+        if self.orchestrator:
+            await self.orchestrator.process_message(
+                self.config.bot.name, message, self.channel_patterns
+            )
+            return
+        
+        # Legacy behavior for backwards compatibility
         # Default behavior: Ignore bot messages and messages not starting with command prefix
         if message.author.bot or not message.content.startswith(self.config.discord.command_prefix):
             return

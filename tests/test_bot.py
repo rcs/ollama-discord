@@ -1,33 +1,94 @@
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 from src.bot import DiscordBot, format_message_for_discord
-from src.config import Config, BotConfig, DiscordConfig, OllamaConfig
+from src.config import Config, BotConfig, DiscordConfig, OllamaConfig, StorageConfig, MessageConfig, RateLimitConfig, LoggingConfig
+from src.domain_services import BotOrchestrator
 
 
 class TestDiscordBot:
     """Test cases for the DiscordBot class."""
     
-    def test_bot_initialization(self):
-        """Test that bot can be initialized with config."""
-        config = Config(
+    def create_test_config(self):
+        """Helper to create a test config."""
+        return Config(
             bot=BotConfig(name="test-bot"),
             discord=DiscordConfig(token="test-token"),
-            ollama=OllamaConfig()
+            ollama=OllamaConfig(),
+            storage=StorageConfig(path="./test_data"),
+            message=MessageConfig(),
+            rate_limit=RateLimitConfig(),
+            logging=LoggingConfig()
         )
+    
+    def test_bot_initialization_legacy_mode(self):
+        """Test that bot can be initialized with config in legacy mode."""
+        config = self.create_test_config()
         bot = DiscordBot(config)
         assert bot is not None
         assert bot.config == config
+        assert bot.orchestrator is None  # No orchestrator in legacy mode
+        assert bot.storage is not None  # Legacy storage created
+        assert bot.rate_limiter is not None  # Legacy rate limiter created
+    
+    def test_bot_initialization_with_orchestrator(self):
+        """Test that bot can be initialized with orchestrator."""
+        config = self.create_test_config()
+        mock_orchestrator = Mock(spec=BotOrchestrator)
+        channel_patterns = ["general", "test-*"]
+        
+        bot = DiscordBot(config, orchestrator=mock_orchestrator, channel_patterns=channel_patterns)
+        assert bot is not None
+        assert bot.config == config
+        assert bot.orchestrator == mock_orchestrator
+        assert bot.channel_patterns == channel_patterns
     
     def test_bot_config_validation(self):
         """Test that bot validates config properly."""
-        config = Config(
-            bot=BotConfig(name="test-bot"),
-            discord=DiscordConfig(token="test-token"),
-            ollama=OllamaConfig()
-        )
+        config = self.create_test_config()
         # This should not raise an exception
         bot = DiscordBot(config)
         assert bot is not None
+    
+    @pytest.mark.asyncio
+    async def test_on_message_with_orchestrator(self):
+        """Test message handling with orchestrator."""
+        config = self.create_test_config()
+        mock_orchestrator = AsyncMock(spec=BotOrchestrator)
+        mock_orchestrator.process_message.return_value = True
+        
+        bot = DiscordBot(config, orchestrator=mock_orchestrator, channel_patterns=["general"])
+        
+        # Mock Discord message
+        mock_message = Mock()
+        mock_message.content = "Hello bot"
+        
+        # Call on_message
+        await bot.on_message(mock_message)
+        
+        # Verify orchestrator was called
+        mock_orchestrator.process_message.assert_called_once_with(
+            "test-bot", mock_message, ["general"]
+        )
+    
+    @pytest.mark.asyncio
+    async def test_on_message_with_custom_handler(self):
+        """Test message handling with custom handler."""
+        config = self.create_test_config()
+        
+        # Mock custom handler that returns True (handled)
+        custom_handler = AsyncMock(return_value=True)
+        
+        bot = DiscordBot(config, custom_message_handler=custom_handler)
+        
+        # Mock Discord message
+        mock_message = Mock()
+        mock_message.content = "Hello bot"
+        
+        # Call on_message
+        await bot.on_message(mock_message)
+        
+        # Verify custom handler was called
+        custom_handler.assert_called_once_with(mock_message)
 
 
 class TestConfig:

@@ -10,6 +10,7 @@ from datetime import datetime
 
 from src.bot_manager import BotManager, BotInstance, MultiBotConfig
 from src.config import load_config
+from src.service_factory import create_multi_bot_services
 
 
 @pytest.fixture
@@ -122,12 +123,18 @@ class TestBotManager:
     
     @pytest.mark.asyncio
     async def test_initialization(self, bot_manager):
-        """Test BotManager initialization."""
+        """Test BotManager initialization with new services."""
         await bot_manager.initialize()
         
         assert bot_manager.multi_bot_config is not None
         assert bot_manager.conversation_state is not None
         assert bot_manager.message_processor is not None
+        
+        # Check new services created by service factory
+        assert bot_manager.orchestrator is not None
+        assert bot_manager.coordinator is not None
+        assert bot_manager.response_generator is not None
+        
         assert len(bot_manager.bot_instances) == 1
         assert 'test-bot' in bot_manager.bot_instances
     
@@ -196,22 +203,30 @@ class TestBotManager:
         
         with patch('src.bot_manager.DiscordBot') as mock_discord_bot:
             mock_bot = AsyncMock()
+            mock_bot.client = AsyncMock()
+            mock_bot.client.start = AsyncMock()
             mock_discord_bot.return_value = mock_bot
-            
-            # Mock the start method to avoid actually connecting to Discord
-            mock_bot.start = AsyncMock()
             
             await bot_manager._start_bot(instance)
             
             assert instance.is_running is True
             assert instance.bot == mock_bot
-            mock_bot.start.assert_called_once()
+            # DiscordBot should be called with orchestrator and channel patterns
+            mock_discord_bot.assert_called_once_with(
+                config=instance.config,
+                orchestrator=bot_manager.orchestrator,
+                channel_patterns=instance.channels
+            )
+            mock_bot.client.start.assert_called_once_with(instance.config.discord.token)
     
     @pytest.mark.asyncio
     async def test_stop_bot_mock(self, bot_manager):
         """Test stopping a bot with mocked dependencies."""
         mock_bot = AsyncMock()
+        mock_bot.client = AsyncMock()
+        mock_bot.client.close = AsyncMock()
         mock_config = Mock()
+        mock_config.bot.name = "test-bot"
         
         instance = BotInstance(
             name="test-bot",
@@ -224,7 +239,7 @@ class TestBotManager:
         
         assert instance.is_running is False
         assert instance.bot is None
-        mock_bot.close.assert_called_once()
+        mock_bot.client.close.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_restart_bot(self, bot_manager):
@@ -249,10 +264,19 @@ class TestBotManager:
         """Test stopping all bots."""
         # Add mock bot instances
         mock_bot1 = AsyncMock()
+        mock_bot1.client = AsyncMock()
+        mock_bot1.client.close = AsyncMock()
         mock_bot2 = AsyncMock()
+        mock_bot2.client = AsyncMock()
+        mock_bot2.client.close = AsyncMock()
         
-        instance1 = BotInstance(name="bot1", config=Mock(), bot=mock_bot1, is_running=True)
-        instance2 = BotInstance(name="bot2", config=Mock(), bot=mock_bot2, is_running=True)
+        mock_config1 = Mock()
+        mock_config1.bot.name = "bot1"
+        mock_config2 = Mock()
+        mock_config2.bot.name = "bot2"
+        
+        instance1 = BotInstance(name="bot1", config=mock_config1, bot=mock_bot1, is_running=True)
+        instance2 = BotInstance(name="bot2", config=mock_config2, bot=mock_bot2, is_running=True)
         
         bot_manager.bot_instances = {'bot1': instance1, 'bot2': instance2}
         bot_manager._running = True
@@ -260,8 +284,8 @@ class TestBotManager:
         await bot_manager.stop_all_bots()
         
         assert bot_manager._running is False
-        mock_bot1.close.assert_called_once()
-        mock_bot2.close.assert_called_once()
+        mock_bot1.client.close.assert_called_once()
+        mock_bot2.client.close.assert_called_once()
     
     @pytest.mark.asyncio
     async def test_reload_configuration(self, bot_manager):

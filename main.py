@@ -11,6 +11,7 @@ from src.config import load_config
 from src.bot import DiscordBot
 from src.bot_manager import BotManager
 from src.multi_bot_config import multi_bot_config_manager
+from src.service_factory import create_services
 
 
 @click.command()
@@ -153,8 +154,11 @@ def main(config: Optional[Path], multi_bot: bool, list_configs: bool,
             bot_config = load_config(str(config))
             click.echo(f"Loaded configuration for bot: {bot_config.bot.name}")
             
-            # Create and run bot
-            bot = DiscordBot(bot_config)
+            # Create services
+            orchestrator, coordinator, response_generator = create_services(bot_config)
+            
+            # Create and run bot with dependency injection
+            bot = DiscordBot(bot_config, orchestrator=orchestrator)
             bot.run()
             
         except FileNotFoundError as e:
