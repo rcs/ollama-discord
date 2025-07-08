@@ -12,6 +12,8 @@ import discord
 
 from .ports import MessageStorage, AIModel, RateLimiter, NotificationSender
 from .conversation_state import ConversationContext
+from .debug_utils import debug_manager, track_message_flow
+from .debug_commands import debug_handler
 
 
 @dataclass
@@ -248,10 +250,24 @@ class BotOrchestrator:
                             channel_patterns: List[str]) -> bool:
         """Process a message and determine if bot should respond."""
         channel_id = message.channel.id
+        message_id = str(message.id)
         
         try:
+            # Check for debug commands first
+            debug_response = await debug_handler.handle_debug_command(message, bot_name)
+            if debug_response:
+                await self.notification_sender.send_message(message.channel, debug_response)
+                return True
+            
             # Check if bot should handle this message
             should_handle = await self.coordinator.should_handle_message(bot_name, message, channel_patterns)
+            
+            # Track processing decision
+            debug_manager.track_message_processing(
+                bot_name, message_id, should_handle, 
+                f"Channel patterns: {channel_patterns}"
+            )
+            
             if not should_handle:
                 return False
             
@@ -281,6 +297,9 @@ class BotOrchestrator:
             
             # Send response
             await self.notification_sender.send_chunked_message(message.channel, response_text)
+            
+            # Track response sent
+            debug_manager.track_response_sent(bot_name, message_id, len(response_text))
             
             # Store bot response
             await self.storage.add_message(

@@ -6,6 +6,7 @@ import discord
 
 from .config import Config, setup_logging
 from .domain_services import BotOrchestrator
+from .debug_utils import debug_manager, track_message_flow
 
 
 def format_message_for_discord(content: str, max_length: int = 2000) -> List[str]:
@@ -134,6 +135,9 @@ class DiscordBot:
     
     async def on_message(self, message: discord.Message) -> None:
         """Handle incoming Discord messages."""
+        # Track message reception
+        debug_manager.track_message_received(self.config.bot.name, message)
+        
         # Use orchestrator for message processing
         await self.orchestrator.process_message(
             self.config.bot.name, message, self.channel_patterns
