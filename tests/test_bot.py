@@ -20,15 +20,15 @@ class TestDiscordBot:
             logging=LoggingConfig()
         )
     
-    def test_bot_initialization_legacy_mode(self):
-        """Test that bot can be initialized with config in legacy mode."""
+    def test_bot_initialization_requires_orchestrator(self):
+        """Test that bot requires orchestrator in new architecture."""
         config = self.create_test_config()
-        bot = DiscordBot(config)
+        mock_orchestrator = Mock(spec=BotOrchestrator)
+        
+        bot = DiscordBot(config, orchestrator=mock_orchestrator)
         assert bot is not None
         assert bot.config == config
-        assert bot.orchestrator is None  # No orchestrator in legacy mode
-        assert bot.storage is not None  # Legacy storage created
-        assert bot.rate_limiter is not None  # Legacy rate limiter created
+        assert bot.orchestrator == mock_orchestrator
     
     def test_bot_initialization_with_orchestrator(self):
         """Test that bot can be initialized with orchestrator."""
@@ -45,8 +45,9 @@ class TestDiscordBot:
     def test_bot_config_validation(self):
         """Test that bot validates config properly."""
         config = self.create_test_config()
+        mock_orchestrator = Mock(spec=BotOrchestrator)
         # This should not raise an exception
-        bot = DiscordBot(config)
+        bot = DiscordBot(config, orchestrator=mock_orchestrator)
         assert bot is not None
     
     @pytest.mark.asyncio
@@ -74,11 +75,12 @@ class TestDiscordBot:
     async def test_on_message_with_custom_handler(self):
         """Test message handling with custom handler."""
         config = self.create_test_config()
+        mock_orchestrator = Mock(spec=BotOrchestrator)
         
         # Mock custom handler that returns True (handled)
         custom_handler = AsyncMock(return_value=True)
         
-        bot = DiscordBot(config, custom_message_handler=custom_handler)
+        bot = DiscordBot(config, orchestrator=mock_orchestrator, custom_message_handler=custom_handler)
         
         # Mock Discord message
         mock_message = Mock()
