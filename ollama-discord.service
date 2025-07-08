@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/home/rcs/dev/ollama-discord
-ExecStart=/home/rcs/dev/ollama-discord/bin/python main.py --config config/bot1.yaml
+ExecStart=/home/rcs/dev/ollama-discord/bin/python main.py --config config/test.yaml
 Restart=always
 RestartSec=10
 Environment=HOME=/home/rcs

@@ -87,6 +87,8 @@ Environment variables can be used in configs with `${VAR_NAME}` syntax.
 To run the bot automatically when you log in, use the systemd user service:
 
 ### Installation
+
+#### Production Mode (Default)
 ```bash
 # Install service (creates user service that starts on login)
 scripts/install-service.sh install
@@ -103,6 +105,22 @@ scripts/install-service.sh follow
 # Uninstall service
 scripts/install-service.sh uninstall
 ```
+
+#### Development Mode (Auto-Restart on File Changes)
+```bash
+# Install development service with auto-restart
+scripts/install-service.sh install --dev
+
+# The bot will automatically restart when you modify:
+# - Any .py files in src/
+# - main.py
+# - Any .yaml files in config/
+```
+
+**Development mode requirements:**
+- Ubuntu/Debian: `sudo apt install entr`
+- macOS: `brew install entr`
+- Arch Linux: `sudo pacman -S entr`
 
 ### Manual Service Management
 ```bash
@@ -127,6 +145,8 @@ journalctl --user -u ollama-discord.service -f
 - **Bot token issues**: Ensure `DISCORD_TOKEN_BOT1` environment variable is set
 - **Ollama connection**: Verify Ollama is running on port 11434
 - **Permission issues**: Service runs as your user, no sudo required
+- **Development mode fails**: Ensure `entr` is installed (see installation commands above)
+- **Auto-restart not working**: Check that files are being watched with `find src/ main.py config/ -name "*.py" -o -name "*.yaml"`
 
 ## File Structure
 
@@ -134,7 +154,8 @@ journalctl --user -u ollama-discord.service -f
 ollama-discord/
 ├── main.py                   # CLI entry point
 ├── pyproject.toml            # Dependencies and project metadata
-├── ollama-discord.service    # Systemd user service file
+├── ollama-discord.service    # Systemd user service file (production)
+├── ollama-discord-dev.service # Systemd user service file (development with auto-restart)
 ├── scripts/
 │   ├── install-service.sh    # Service installation script
 │   └── setup_branch_protection.py  # Existing script

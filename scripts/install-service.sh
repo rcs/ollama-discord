@@ -4,6 +4,7 @@
 
 SERVICE_NAME="ollama-discord"
 SERVICE_FILE="${SERVICE_NAME}.service"
+DEV_SERVICE_FILE="${SERVICE_NAME}-dev.service"
 USER_SERVICE_DIR="$HOME/.config/systemd/user"
 
 # Colors for output
@@ -27,22 +28,46 @@ print_error() {
 
 # Function to check if service file exists
 check_service_file() {
-    if [ ! -f "$SERVICE_FILE" ]; then
-        print_error "Service file '$SERVICE_FILE' not found in current directory."
+    local file="$1"
+    if [ ! -f "$file" ]; then
+        print_error "Service file '$file' not found in current directory."
         echo "Make sure you're running this script from the ollama-discord directory."
+        exit 1
+    fi
+}
+
+# Function to check if entr is available
+check_entr() {
+    if ! command -v entr &> /dev/null; then
+        print_error "entr command not found. Please install it first:"
+        echo "  Ubuntu/Debian: sudo apt install entr"
+        echo "  macOS: brew install entr"
+        echo "  Arch Linux: sudo pacman -S entr"
         exit 1
     fi
 }
 
 # Function to install service
 install_service() {
-    print_status "Installing Ollama Discord Bot as user service..."
+    local dev_mode="$1"
+    local service_file="$SERVICE_FILE"
+    local mode_desc="production"
+    
+    if [ "$dev_mode" = "--dev" ]; then
+        check_entr
+        service_file="$DEV_SERVICE_FILE"
+        mode_desc="development (with auto-restart)"
+    fi
+    
+    check_service_file "$service_file"
+    
+    print_status "Installing Ollama Discord Bot as user service ($mode_desc)..."
     
     # Create user systemd directory if it doesn't exist
     mkdir -p "$USER_SERVICE_DIR"
     
     # Copy service file
-    cp "$SERVICE_FILE" "$USER_SERVICE_DIR/"
+    cp "$service_file" "$USER_SERVICE_DIR/$SERVICE_FILE"
     print_status "Service file copied to $USER_SERVICE_DIR/"
     
     # Reload systemd user daemon
@@ -59,7 +84,12 @@ install_service() {
     
     # Check status
     if systemctl --user is-active --quiet "$SERVICE_NAME.service"; then
-        print_status "Service is running successfully!"
+        if [ "$dev_mode" = "--dev" ]; then
+            print_status "Development service is running successfully!"
+            print_status "The bot will automatically restart when you modify .py or .yaml files."
+        else
+            print_status "Production service is running successfully!"
+        fi
     else
         print_error "Service failed to start. Check logs with: journalctl --user -u $SERVICE_NAME.service"
         exit 1
@@ -111,28 +141,37 @@ follow_logs() {
 show_help() {
     echo "Ollama Discord Bot Service Management"
     echo ""
-    echo "Usage: $0 [COMMAND]"
+    echo "Usage: $0 [COMMAND] [OPTIONS]"
     echo ""
     echo "Commands:"
-    echo "  install     Install and start the service"
-    echo "  uninstall   Stop and remove the service"
-    echo "  status      Show service status"
-    echo "  logs        Show recent service logs"
-    echo "  follow      Follow service logs in real-time"
-    echo "  help        Show this help message"
+    echo "  install [--dev]  Install and start the service"
+    echo "  uninstall        Stop and remove the service"
+    echo "  status           Show service status"
+    echo "  logs             Show recent service logs"
+    echo "  follow           Follow service logs in real-time"
+    echo "  help             Show this help message"
+    echo ""
+    echo "Options:"
+    echo "  --dev           Install in development mode with auto-restart on file changes"
+    echo "                  (requires 'entr' to be installed)"
     echo ""
     echo "Examples:"
-    echo "  $0 install    # Install and start the service"
-    echo "  $0 status     # Check if service is running"
-    echo "  $0 logs       # View recent log entries"
+    echo "  $0 install           # Install production service"
+    echo "  $0 install --dev     # Install development service with auto-restart"
+    echo "  $0 status            # Check if service is running"
+    echo "  $0 logs              # View recent log entries"
+    echo ""
+    echo "Development mode requirements:"
+    echo "  Ubuntu/Debian: sudo apt install entr"
+    echo "  macOS: brew install entr"
+    echo "  Arch Linux: sudo pacman -S entr"
     echo ""
 }
 
 # Main script logic
 case "$1" in
     install)
-        check_service_file
-        install_service
+        install_service "$2"
         ;;
     uninstall)
         uninstall_service
