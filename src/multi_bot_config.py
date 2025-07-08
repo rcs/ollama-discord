@@ -4,7 +4,7 @@ import os
 import yaml
 from typing import Optional, Dict, Any, List
 from pathlib import Path
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import logging
 
 from .config import Config, load_config
@@ -17,7 +17,8 @@ class ResponseBehaviorConfig(BaseModel):
     context_weight: float = Field(default=0.8, ge=0.0, le=1.0)
     max_response_length: int = Field(default=500, gt=0)
     
-    @validator('engagement_threshold', 'response_probability', 'context_weight')
+    @field_validator('engagement_threshold', 'response_probability', 'context_weight')
+    @classmethod
     def validate_probability(cls, v):
         if not 0.0 <= v <= 1.0:
             raise ValueError("Probability values must be between 0.0 and 1.0")
@@ -44,13 +45,15 @@ class BotInstanceConfig(BaseModel):
     enabled: bool = True
     priority: int = 0
     
-    @validator('config_file')
+    @field_validator('config_file')
+    @classmethod
     def validate_config_file(cls, v):
         if not v.endswith(('.yaml', '.yml')):
             raise ValueError("Config file must be a YAML file")
         return v
     
-    @validator('channels')
+    @field_validator('channels')
+    @classmethod
     def validate_channels(cls, v):
         if not v:
             raise ValueError("At least one channel must be specified")
@@ -69,7 +72,8 @@ class GlobalSettings(BaseModel):
     enable_bot_mentions: bool = True
     debug_mode: bool = False
     
-    @validator('response_delay')
+    @field_validator('response_delay')
+    @classmethod
     def validate_response_delay(cls, v):
         if '-' in v:
             try:
@@ -94,7 +98,8 @@ class MultiBotConfig(BaseModel):
     global_settings: GlobalSettings = GlobalSettings()
     logging: Optional[Dict[str, Any]] = None
     
-    @validator('bots')
+    @field_validator('bots')
+    @classmethod
     def validate_bots(cls, v):
         if not v:
             raise ValueError("At least one bot must be configured")

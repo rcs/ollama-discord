@@ -139,7 +139,6 @@ class TestBotManager:
         
         assert bot_manager.multi_bot_config is not None
         assert bot_manager.conversation_state is not None
-        assert bot_manager.message_processor is not None
         
         # Check new services created by service factory
         assert bot_manager.orchestrator is not None
@@ -305,7 +304,6 @@ class TestBotManagerIntegration:
         # Verify all components are initialized
         assert manager.multi_bot_config is not None
         assert manager.conversation_state is not None
-        assert manager.message_processor is not None
         assert len(manager.bot_instances) == 1
         
         # Verify bot instance configuration

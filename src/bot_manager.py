@@ -4,14 +4,12 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Set
 from pathlib import Path
-import json
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from datetime import datetime
 
 from .bot import DiscordBot
 from .config import load_config, BotConfig
 from .conversation_state import ConversationState
-from .message_processor import MessageProcessor
 from .service_factory import create_multi_bot_services
 from .multi_bot_config import MultiBotConfig, multi_bot_config_manager
 
@@ -40,7 +38,6 @@ class BotManager:
         self.config_file = Path(config_file)
         self.bot_instances: Dict[str, BotInstance] = {}
         self.conversation_state: Optional[ConversationState] = None
-        self.message_processor: Optional[MessageProcessor] = None
         self.multi_bot_config: MultiBotConfig
         self.logger = logging.getLogger(__name__)
         self._running = False
@@ -65,12 +62,6 @@ class BotManager:
             )
             self.logger.info("Initialized services using service factory")
             
-            # Create message processor
-            self.message_processor = MessageProcessor(
-                conversation_state=self.conversation_state,
-                global_settings=global_settings_dict
-            )
-            self.logger.info("Initialized MessageProcessor successfully")
             
         except Exception as e:
             self.logger.error(f"Error during initialization: {e}")
@@ -167,49 +158,6 @@ class BotManager:
         """Start a single bot instance."""
         try:
             self.logger.info(f"Starting bot: {bot_instance.name}")
-            
-            # Create enhanced message handler
-            async def enhanced_message_handler(message):
-                """Enhanced message processing with multi-bot coordination."""
-                try:
-                    # Use the bot's own logger which has DEBUG level configured
-                    bot_logger = logging.getLogger(f"bot.{bot_instance.name}")
-                    bot_logger.setLevel(logging.DEBUG)
-                    
-                    # Also ensure we can see the output by using INFO level
-                    bot_logger.info(f"🔍 [{bot_instance.name}] RECEIVED MESSAGE: '{message.content[:50]}...' in #{message.channel.name}")
-                    
-                    # Check if this bot should handle this message
-                    should_handle = await self.message_processor.should_bot_handle_message(
-                        bot_instance.name, message, bot_instance.channels
-                    )
-                    
-                    bot_logger.info(f"🤔 [{bot_instance.name}] HANDLE DECISION: {should_handle}")
-                    
-                    if should_handle:
-                        # Get conversation context
-                        context = await self.conversation_state.get_context(
-                            channel_id=message.channel.id,
-                            user_id=message.author.id
-                        )
-                        
-                        # Process message with context
-                        await self.message_processor.process_message(
-                            bot_instance.name, message, context, None  # No fallback needed here
-                        )
-                        
-                        # Update bot activity
-                        bot_instance.last_activity = datetime.now()
-                        return True  # Message was handled
-                    else:
-                        bot_logger.info(f"📞 [{bot_instance.name}] NOT HANDLING - will try default handler")
-                        return False  # Let default handler try
-                        
-                except Exception as e:
-                    import traceback
-                    bot_logger.error(f"[{bot_instance.name}] Error in enhanced message handler: {e}")
-                    bot_logger.error(f"[{bot_instance.name}] Full traceback: {traceback.format_exc()}")
-                    return False  # Let default handler try
             
             # Create Discord bot with orchestrator
             bot = DiscordBot(
