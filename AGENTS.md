@@ -1,5 +1,12 @@
 # AGENTS.md
 
+## Git Workflow Requirements
+- **ALWAYS create a feature branch** at the start of any work: `git checkout -b <type>/<description>`
+- **ALWAYS create a PR** at the end of any work: `gh pr create --title "..." --body "..."`
+- **NEVER commit directly to main branch**
+- Branch types: `feature/`, `fix/`, `docs/`, `refactor/`, `test/`
+- See `docs/PR_WORKFLOW.md` for detailed workflow
+
 ## Build/Test Commands
 - **Run all tests**: `bin/python -m pytest tests/ -v`
 - **Run single test file**: `bin/python -m pytest tests/test_bot.py -v`
