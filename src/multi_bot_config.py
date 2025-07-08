@@ -201,7 +201,7 @@ class MultiBotConfigManager:
     def _validate_bot_configs(self, multi_bot_config: MultiBotConfig, base_path: Path):
         """Validate that all referenced bot configuration files exist and are valid."""
         for bot_config in multi_bot_config.bots:
-            config_file = base_path / bot_config.config_file
+            config_file = Path(bot_config.config_file)
             
             if not config_file.is_absolute():
                 config_file = base_path / config_file
