@@ -4,7 +4,7 @@ bot:
   description: "General purpose AI assistant"
   
 discord:
-  token: "${DISCORD_TOKEN_BOT1}"
+  token: "${DISCORD_TOKEN}"
   command_prefix: "!ask"
   
 ollama:
