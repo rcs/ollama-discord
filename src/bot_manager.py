@@ -254,17 +254,19 @@ class BotManager:
             async def enhanced_message_handler(message):
                 """Enhanced message processing with multi-bot coordination."""
                 try:
-                    # Use INFO level to ensure we see the debug output  
-                    print(f"🔍 [{bot_instance.name}] RECEIVED MESSAGE: '{message.content[:50]}...' in #{message.channel.name}")
-                    self.logger.info(f"🔍 [{bot_instance.name}] RECEIVED MESSAGE: '{message.content[:50]}...' in #{message.channel.name}")
+                    # Use the bot's own logger which has DEBUG level configured
+                    bot_logger = logging.getLogger(f"bot.{bot_instance.name}")
+                    bot_logger.setLevel(logging.DEBUG)
+                    
+                    # Also ensure we can see the output by using INFO level
+                    bot_logger.info(f"🔍 [{bot_instance.name}] RECEIVED MESSAGE: '{message.content[:50]}...' in #{message.channel.name}")
                     
                     # Check if this bot should handle this message
                     should_handle = await self.message_processor.should_bot_handle_message(
                         bot_instance.name, message, bot_instance.channels
                     )
                     
-                    print(f"🤔 [{bot_instance.name}] HANDLE DECISION: {should_handle}")
-                    self.logger.info(f"🤔 [{bot_instance.name}] HANDLE DECISION: {should_handle}")
+                    bot_logger.info(f"🤔 [{bot_instance.name}] HANDLE DECISION: {should_handle}")
                     
                     if should_handle:
                         # Get conversation context
@@ -282,17 +284,59 @@ class BotManager:
                         bot_instance.last_activity = datetime.now()
                         return True  # Message was handled
                     else:
-                        self.logger.info(f"📞 [{bot_instance.name}] NOT HANDLING - will try default handler")
+                        bot_logger.info(f"📞 [{bot_instance.name}] NOT HANDLING - will try default handler")
                         return False  # Let default handler try
                         
                 except Exception as e:
                     import traceback
-                    self.logger.error(f"[{bot_instance.name}] Error in enhanced message handler: {e}")
-                    self.logger.error(f"[{bot_instance.name}] Full traceback: {traceback.format_exc()}")
+                    bot_logger.error(f"[{bot_instance.name}] Error in enhanced message handler: {e}")
+                    bot_logger.error(f"[{bot_instance.name}] Full traceback: {traceback.format_exc()}")
                     return False  # Let default handler try
             
             # Create Discord bot with enhanced message processing
             bot = DiscordBot(bot_instance.config, custom_message_handler=enhanced_message_handler)
+            
+            # Make sure we can use the bot's logger in the enhanced handler
+            async def enhanced_message_handler_with_bot_logger(message):
+                """Enhanced message processing with multi-bot coordination using bot's logger."""
+                try:
+                    # Use the actual bot's logger which is properly configured
+                    bot.logger.info(f"🔍 [{bot_instance.name}] RECEIVED MESSAGE: '{message.content[:50]}...' in #{message.channel.name}")
+                    
+                    # Check if this bot should handle this message
+                    should_handle = await self.message_processor.should_bot_handle_message(
+                        bot_instance.name, message, bot_instance.channels
+                    )
+                    
+                    bot.logger.info(f"🤔 [{bot_instance.name}] HANDLE DECISION: {should_handle}")
+                    
+                    if should_handle:
+                        # Get conversation context
+                        context = await self.conversation_state.get_context(
+                            channel_id=message.channel.id,
+                            user_id=message.author.id
+                        )
+                        
+                        # Process message with context
+                        await self.message_processor.process_message(
+                            bot_instance.name, message, context, None  # No fallback needed here
+                        )
+                        
+                        # Update bot activity
+                        bot_instance.last_activity = datetime.now()
+                        return True  # Message was handled
+                    else:
+                        bot.logger.info(f"📞 [{bot_instance.name}] NOT HANDLING - will try default handler")
+                        return False  # Let default handler try
+                        
+                except Exception as e:
+                    import traceback
+                    bot.logger.error(f"[{bot_instance.name}] Error in enhanced message handler: {e}")
+                    bot.logger.error(f"[{bot_instance.name}] Full traceback: {traceback.format_exc()}")
+                    return False  # Let default handler try
+            
+            # Replace the handler with the one that uses bot's logger
+            bot.custom_message_handler = enhanced_message_handler_with_bot_logger
             
             # Store bot instance
             bot_instance.bot = bot

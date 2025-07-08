@@ -44,6 +44,8 @@ class MessageProcessor:
     def __init__(self, conversation_state: ConversationState, global_settings: Dict[str, Any]):
         self.conversation_state = conversation_state
         self.logger = logging.getLogger(__name__)
+        # Ensure we can see debug output
+        self.logger.setLevel(logging.DEBUG)
         
         # Validate inputs
         if conversation_state is None:
@@ -92,33 +94,35 @@ class MessageProcessor:
     async def should_bot_handle_message(self, bot_name: str, message: discord.Message, 
                                        channel_patterns: List[str]) -> bool:
         """Determine if a bot should handle a specific message."""
-        self.logger.info(f"🔍 [{bot_name}] ANALYZING MESSAGE: '{message.content[:100]}...' in #{message.channel.name}")
+        # Use a more visible logger (we'll create one on the fly with INFO level)
+        bot_logger = logging.getLogger(f"bot.{bot_name}")
+        bot_logger.info(f"🔍 [{bot_name}] ANALYZING MESSAGE: '{message.content[:100]}...' in #{message.channel.name}")
         
         # Skip bot messages
         if message.author.bot:
-            self.logger.info(f"❌ [{bot_name}] SKIPPED: Bot message from {message.author.display_name}")
+            bot_logger.info(f"❌ [{bot_name}] SKIPPED: Bot message from {message.author.display_name}")
             return False
         
         # Check channel filtering
         channel_match = self._matches_channel_patterns(message.channel, channel_patterns)
         if not channel_match:
-            self.logger.info(f"❌ [{bot_name}] SKIPPED: Channel #{message.channel.name} not in patterns {channel_patterns}")
+            bot_logger.info(f"❌ [{bot_name}] SKIPPED: Channel #{message.channel.name} not in patterns {channel_patterns}")
             return False
         else:
-            self.logger.info(f"✅ [{bot_name}] CHANNEL MATCH: #{message.channel.name} matches patterns {channel_patterns}")
+            bot_logger.info(f"✅ [{bot_name}] CHANNEL MATCH: #{message.channel.name} matches patterns {channel_patterns}")
         
         # Check if message is a command (starts with prefix)
         if message.content.startswith('!'):
-            self.logger.info(f"❌ [{bot_name}] SKIPPED: Command message (starts with !)")
+            bot_logger.info(f"❌ [{bot_name}] SKIPPED: Command message (starts with !)")
             return False
         
         # Check for bot coordination (avoid multiple bots responding simultaneously)
         should_coordinate = await self._should_coordinate_response(bot_name, message)
         if should_coordinate:
-            self.logger.info(f"❌ [{bot_name}] SKIPPED: Coordination - too many active responses")
+            bot_logger.info(f"❌ [{bot_name}] SKIPPED: Coordination - too many active responses")
             return False
         
-        self.logger.info(f"🎯 [{bot_name}] WILL HANDLE: All checks passed!")
+        bot_logger.info(f"🎯 [{bot_name}] WILL HANDLE: All checks passed!")
         return True
     
     def _matches_channel_patterns(self, channel: discord.TextChannel, patterns: List[str]) -> bool:
@@ -327,11 +331,12 @@ class MessageProcessor:
         
         reasoning = f"Probability: {probability:.2f} ({', '.join(reasoning_parts)})"
         
-        # Debug logging
-        self.logger.info(f"🎲 [{bot_name}] DECISION: probability={probability:.2f}, random_roll={random_roll:.2f}, will_respond={should_respond}")
-        self.logger.info(f"📋 [{bot_name}] FACTORS: {factors}")
-        self.logger.info(f"🗨️ [{bot_name}] MENTIONED_BOTS: {message_context.mentioned_bots}")
-        self.logger.info(f"⏱️ [{bot_name}] DELAY: {delay:.1f}s")
+        # Debug logging using bot logger
+        bot_logger = logging.getLogger(f"bot.{bot_name}")
+        bot_logger.info(f"🎲 [{bot_name}] DECISION: probability={probability:.2f}, random_roll={random_roll:.2f}, will_respond={should_respond}")
+        bot_logger.info(f"📋 [{bot_name}] FACTORS: {factors}")
+        bot_logger.info(f"🗨️ [{bot_name}] MENTIONED_BOTS: {message_context.mentioned_bots}")
+        bot_logger.info(f"⏱️ [{bot_name}] DELAY: {delay:.1f}s")
         
         return ResponseDecision(
             should_respond=should_respond,
