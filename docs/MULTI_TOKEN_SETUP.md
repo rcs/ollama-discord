@@ -61,13 +61,10 @@ Give each bot personality its own Discord application and token:
 
 1. **Update your .env file:**
 ```bash
-# Individual bot tokens
+# Individual bot tokens (required - no default/shared tokens)
 DISCORD_TOKEN_SAGE=your_sage_bot_token_here
 DISCORD_TOKEN_SPARK=your_spark_bot_token_here
 DISCORD_TOKEN_LOGIC=your_logic_bot_token_here
-
-# Optional: Default token for backward compatibility
-DISCORD_TOKEN=your_default_token_here
 
 # Ollama configuration (shared by all bots)
 OLLAMA_BASE_URL=http://127.0.0.1:11434
@@ -94,30 +91,25 @@ set DISCORD_TOKEN_LOGIC=your_logic_bot_token_here
 #### Multi-Bot Configuration (`config/multi_bot.yaml`)
 
 ```yaml
-# Bot-specific token mapping
-discord_tokens:
-  sage: "${DISCORD_TOKEN_SAGE}"
-  spark: "${DISCORD_TOKEN_SPARK}"
-  logic: "${DISCORD_TOKEN_LOGIC}"
-  default: "${DISCORD_TOKEN}"  # Fallback for bots without specific tokens
-
-# Bot configurations
+# Bot configurations with individual tokens
 bots:
   - name: "sage"
     config_file: "sage.yaml"
+    discord_token: "${DISCORD_TOKEN_SAGE}"  # Required - each bot needs its own token
     channels: 
       - "philosophy"
       - "advice-*"
-    # Token will be resolved from discord_tokens mapping
     
   - name: "spark"
     config_file: "spark.yaml"
+    discord_token: "${DISCORD_TOKEN_SPARK}"  # Required - each bot needs its own token
     channels:
       - "creative"
       - "brainstorm*"
     
   - name: "logic"
     config_file: "logic.yaml"
+    discord_token: "${DISCORD_TOKEN_LOGIC}"  # Required - each bot needs its own token
     channels:
       - "tech-*"
       - "research"
@@ -125,7 +117,22 @@ bots:
 
 #### Individual Bot Configurations
 
-No changes needed! Individual bot configs (`sage.yaml`, etc.) will automatically use the token from the multi-bot configuration.
+Remove the token from individual bot configs (`sage.yaml`, etc.). The token is now only specified in `multi_bot.yaml`.
+
+Before:
+```yaml
+# In sage.yaml
+discord:
+  token: "${DISCORD_TOKEN}"  # Remove this
+  command_prefix: "!sage"
+```
+
+After:
+```yaml
+# In sage.yaml
+discord:
+  command_prefix: "!sage"  # Token removed, specified in multi_bot.yaml
+```
 
 ### Step 4: Verify Configuration
 
@@ -149,52 +156,35 @@ bin/python main.py -c config/multi_bot.yaml
 
 Note: Each bot should now show a different bot name/discriminator.
 
-## Configuration Schema Options
+## Configuration Schema
 
-### Option 1: Token Mapping (Recommended)
-```yaml
-discord_tokens:
-  sage: "${DISCORD_TOKEN_SAGE}"
-  spark: "${DISCORD_TOKEN_SPARK}"
-  logic: "${DISCORD_TOKEN_LOGIC}"
-  default: "${DISCORD_TOKEN}"
-```
+### Simple Per-Bot Tokens
+Each bot must have its own token specified directly in the multi_bot.yaml:
 
-**Pros:**
-- Clean separation of tokens from bot config
-- Easy to see all tokens in one place
-- Supports default fallback
-
-### Option 2: Inline Tokens
 ```yaml
 bots:
   - name: "sage"
     config_file: "sage.yaml"
-    discord_token: "${DISCORD_TOKEN_SAGE}"
-```
-
-**Pros:**
-- Token directly associated with bot
-- No separate mapping section needed
-
-### Option 3: Mixed Approach
-```yaml
-# Default token for most bots
-discord_token_default: "${DISCORD_TOKEN}"
-
-bots:
-  - name: "sage"
-    config_file: "sage.yaml"
-    discord_token: "${DISCORD_TOKEN_SAGE}"  # Override
+    discord_token: "${DISCORD_TOKEN_SAGE}"  # Required
+    channels: ["philosophy", "advice-*"]
     
-  - name: "helper"
-    config_file: "helper.yaml"
-    # Uses default token
+  - name: "spark"
+    config_file: "spark.yaml"
+    discord_token: "${DISCORD_TOKEN_SPARK}"  # Required
+    channels: ["creative", "brainstorm*"]
+    
+  - name: "logic"
+    config_file: "logic.yaml"
+    discord_token: "${DISCORD_TOKEN_LOGIC}"  # Required
+    channels: ["tech-*", "research"]
 ```
 
-**Pros:**
-- Flexible for mixed environments
-- Backward compatible
+**Benefits:**
+- Simple and direct - token with bot configuration
+- No indirection or lookups
+- Clear which token belongs to which bot
+- Easy to add/remove bots
+- No backward compatibility complexity
 
 ## Troubleshooting
 
@@ -210,8 +200,9 @@ bots:
 
 ### Issue: Still Seeing Duplicates
 - Ensure each bot has a unique token
-- Check logs to verify different bot names
+- Check logs to verify different bot names (should see different #discriminators)
 - Use `!debug duplicates` to investigate
+- Verify you're not running the old single-token configuration
 
 ### Viewing Current Configuration
 Use debug commands to verify token usage:
@@ -240,18 +231,20 @@ Use debug commands to verify token usage:
 
 ### From Single Token to Multiple Tokens
 
-1. **Keep existing bot running** (optional)
-2. **Create new Discord applications**
-3. **Update .env with new tokens**
-4. **Test with one bot first**
-5. **Gradually migrate all bots**
-6. **Remove old shared token**
+1. **Create new Discord applications** for each bot personality
+2. **Update .env with new tokens**:
+   ```bash
+   DISCORD_TOKEN_SAGE=new_sage_token
+   DISCORD_TOKEN_SPARK=new_spark_token
+   DISCORD_TOKEN_LOGIC=new_logic_token
+   ```
+3. **Update multi_bot.yaml** to include discord_token for each bot
+4. **Remove token from individual bot configs** (sage.yaml, etc.)
+5. **Restart the service**
+6. **Verify each bot shows different username** in logs
 
-### Rollback Plan
-If issues occur:
-1. Keep original token as `DISCORD_TOKEN`
-2. Remove bot-specific tokens from config
-3. Restart service
+### No Rollback Support
+This is a breaking change - there's no backward compatibility with single token configuration. Make sure you have all tokens ready before updating.
 
 ## Benefits of Multiple Tokens
 

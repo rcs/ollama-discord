@@ -13,7 +13,7 @@ This plan addresses the duplicate response issue by implementing support for mul
 - Discord sends each message to all clients, causing duplicate responses
 
 ## Solution: Multiple Discord Tokens
-Each bot personality will have its own Discord token, creating truly independent bots.
+Each bot personality will have its own Discord token, creating truly independent bots. No default tokens or backward compatibility - each bot must have its own token.
 
 ## Implementation Phases
 
@@ -35,38 +35,34 @@ Each bot personality will have its own Discord token, creating truly independent
 **Status**: 📋 Planned  
 
 **Goals**:
-- Design backward-compatible configuration schema
-- Support both single shared token and per-bot tokens
-- Allow environment variables and .env file usage
+- Simple per-bot token configuration
+- Each bot MUST have its own token (no sharing)
+- Use environment variables and .env file
 
-**Proposed Schema Options**:
-
-Option A: Token in bot config
+**Chosen Schema**: Per-bot token approach
 ```yaml
 bots:
   - name: "sage"
     config_file: "sage.yaml"
-    discord_token: "${DISCORD_TOKEN_SAGE}"  # Override token for this bot
-```
-
-Option B: Token mapping section
-```yaml
-discord_tokens:
-  sage: "${DISCORD_TOKEN_SAGE}"
-  spark: "${DISCORD_TOKEN_SPARK}"
-  logic: "${DISCORD_TOKEN_LOGIC}"
-  default: "${DISCORD_TOKEN}"  # Fallback
-
-bots:
-  - name: "sage"
-    config_file: "sage.yaml"
+    discord_token: "${DISCORD_TOKEN_SAGE}"  # Required
+    channels: ["philosophy", "advice-*"]
+    
+  - name: "spark"
+    config_file: "spark.yaml"
+    discord_token: "${DISCORD_TOKEN_SPARK}"  # Required
+    channels: ["creative", "brainstorm*"]
+    
+  - name: "logic"
+    config_file: "logic.yaml"
+    discord_token: "${DISCORD_TOKEN_LOGIC}"  # Required
+    channels: ["tech-*", "research"]
 ```
 
 **Tasks**:
-- [ ] Evaluate configuration options
-- [ ] Choose best approach
-- [ ] Update configuration models
-- [ ] Add validation for token configuration
+- [ ] Update MultiBotConfig model to include discord_token field
+- [ ] Add validation to ensure each bot has a token
+- [ ] Remove any default token logic
+- [ ] Update configuration loading to use bot-specific tokens
 
 ### Phase 2: Environment Variable Support
 **Status**: 📋 Planned  
@@ -74,12 +70,12 @@ bots:
 **Goals**:
 - Support multiple tokens via environment variables
 - Support .env file with multiple tokens
-- Maintain backward compatibility
+- Clear error messages for missing tokens
 
 **Tasks**:
 - [ ] Update .env.example with multiple token examples
-- [ ] Implement token resolution logic
-- [ ] Add validation for missing tokens
+- [ ] Remove DISCORD_TOKEN (single token) support
+- [ ] Add validation for missing tokens with helpful error messages
 - [ ] Test environment variable loading
 
 ### Phase 3: Bot Manager Refactoring
@@ -87,14 +83,14 @@ bots:
 
 **Goals**:
 - Update bot manager to use per-bot tokens
-- Ensure each bot uses its configured token
-- Add logging for token usage
+- Each bot uses only its specific token
+- Clear logging for token usage
 
 **Tasks**:
-- [ ] Update BotManager token handling
-- [ ] Modify bot initialization to use specific tokens
-- [ ] Add debug logging for token assignment
-- [ ] Update error handling for invalid tokens
+- [ ] Update BotManager to pass bot-specific token to each DiscordBot
+- [ ] Remove token from individual bot config files (use multi_bot.yaml only)
+- [ ] Add debug logging showing which token each bot is using
+- [ ] Update error handling for invalid/missing tokens
 
 ### Phase 4: Testing and Validation
 **Status**: 📋 Planned  
@@ -102,13 +98,14 @@ bots:
 **Goals**:
 - Test multiple token configuration
 - Verify no duplicate responses
-- Ensure backward compatibility
+- Ensure proper error handling
 
 **Tasks**:
-- [ ] Create test configurations
+- [ ] Create test configurations with 3 different tokens
 - [ ] Test with multiple Discord applications
-- [ ] Verify each bot connects independently
+- [ ] Verify each bot connects independently (different bot users)
 - [ ] Test error scenarios (missing tokens, invalid tokens)
+- [ ] Verify no duplicate responses in Discord
 - [ ] Update integration tests
 
 ### Phase 5: Documentation Updates
@@ -125,36 +122,41 @@ bots:
 - [ ] Update configuration examples
 - [ ] Add troubleshooting section
 
-## Configuration Best Practices Research
+## Configuration Approach
 
-### Environment Variable Arrays
-Common patterns for multiple values:
-1. **Indexed naming**: `DISCORD_TOKEN_1`, `DISCORD_TOKEN_2`
-2. **Named suffixes**: `DISCORD_TOKEN_SAGE`, `DISCORD_TOKEN_SPARK`
-3. **JSON array**: `DISCORD_TOKENS='["token1", "token2"]'`
-4. **Comma-separated**: `DISCORD_TOKENS="token1,token2,token3"`
+### Per-Bot Token Configuration
+Each bot explicitly declares its token in the multi_bot.yaml:
 
-### Recommendation
-Use named suffixes for clarity and maintainability:
+```yaml
+bots:
+  - name: "sage"
+    config_file: "sage.yaml"
+    discord_token: "${DISCORD_TOKEN_SAGE}"
+    channels: ["philosophy", "advice-*"]
+```
+
+### Environment Variables
+Using named suffixes for clarity:
 - `DISCORD_TOKEN_SAGE`
 - `DISCORD_TOKEN_SPARK`
 - `DISCORD_TOKEN_LOGIC`
 
-This approach:
-- Makes it clear which token belongs to which bot
-- Allows easy addition/removal of bots
-- Works well with .env files
-- Is self-documenting
+### No Backward Compatibility
+- No default token support
+- No fallback mechanisms
+- Each bot MUST have its own token
+- Clear error if token is missing
 
 ## Success Criteria
-- [ ] Each bot personality can use a different Discord token
+- [ ] Each bot personality uses a different Discord token
 - [ ] No duplicate responses when using multiple tokens
-- [ ] Backward compatible with single token configuration
+- [ ] Clear error messages when tokens are missing
 - [ ] Clear documentation for setup and configuration
 - [ ] Debug commands show which token each bot is using
+- [ ] Each bot shows different username in Discord
 
 ## Notes
-- Maintain backward compatibility for users with single token
-- Provide clear migration guide
-- Consider security implications of multiple tokens
-- Update service files if needed
+- No backward compatibility - clean break
+- Each bot must have its own Discord application
+- Tokens configured only in multi_bot.yaml
+- Individual bot configs (sage.yaml, etc.) no longer contain tokens
