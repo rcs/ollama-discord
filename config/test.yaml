@@ -1,11 +1,11 @@
 # Test configuration for service validation
-# This uses a fake token - the service will fail gracefully
+# Uses DISCORD_TOKEN from .env file or environment
 bot:
   name: "test-bot"
   description: "Test bot for service validation"
   
 discord:
-  token: "fake-token-for-testing"
+  token: "${DISCORD_TOKEN}"
   command_prefix: "!test"
   
 ollama:

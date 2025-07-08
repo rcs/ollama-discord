@@ -6,7 +6,7 @@ bot:
   description: "Example bot configuration"
   
 discord:
-  token: "YOUR_DISCORD_BOT_TOKEN_HERE"
+  token: "${DISCORD_TOKEN}"
   command_prefix: "!ask"
   
 ollama:
