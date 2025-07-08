@@ -1,0 +1,15 @@
+[Unit]
+Description=Ollama Discord Bot
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/rcs/dev/ollama-discord
+ExecStart=/home/rcs/dev/ollama-discord/bin/python main.py --config config/bot1.yaml
+Restart=always
+RestartSec=10
+Environment=HOME=/home/rcs
+
+[Install]
+WantedBy=default.target

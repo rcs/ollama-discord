@@ -82,18 +82,68 @@ Environment variables can be used in configs with `${VAR_NAME}` syntax.
 - Discord bot tokens configured in YAML files or environment variables
 - Proper Discord bot permissions (read messages, send messages)
 
+## Auto-Start Service
+
+To run the bot automatically when you log in, use the systemd user service:
+
+### Installation
+```bash
+# Install service (creates user service that starts on login)
+bin/install-service.sh install
+
+# Check service status
+bin/install-service.sh status
+
+# View logs
+bin/install-service.sh logs
+
+# Follow logs in real-time
+bin/install-service.sh follow
+
+# Uninstall service
+bin/install-service.sh uninstall
+```
+
+### Manual Service Management
+```bash
+# Start service manually
+systemctl --user start ollama-discord.service
+
+# Stop service
+systemctl --user stop ollama-discord.service
+
+# Check status
+systemctl --user status ollama-discord.service
+
+# View logs
+journalctl --user -u ollama-discord.service
+
+# Follow logs
+journalctl --user -u ollama-discord.service -f
+```
+
+### Troubleshooting
+- **Service fails to start**: Check logs with `bin/install-service.sh logs`
+- **Bot token issues**: Ensure `DISCORD_TOKEN_BOT1` environment variable is set
+- **Ollama connection**: Verify Ollama is running on port 11434
+- **Permission issues**: Service runs as your user, no sudo required
+
 ## File Structure
 
 ```
 ollama-discord/
-├── main.py              # CLI entry point
-├── pyproject.toml       # Dependencies and project metadata
+├── main.py                   # CLI entry point
+├── pyproject.toml            # Dependencies and project metadata
+├── ollama-discord.service    # Systemd user service file
+├── bin/
+│   ├── install-service.sh    # Service installation script
+│   └── python               # Virtual environment Python executable
 ├── src/
 │   ├── __init__.py
-│   ├── bot.py          # DiscordBot class with full functionality
-│   └── config.py       # Configuration models and loading
+│   ├── bot.py               # DiscordBot class with full functionality
+│   └── config.py            # Configuration models and loading
 ├── config/
-│   ├── example.yaml    # Template configuration
-│   └── *.yaml         # Individual bot configurations
-└── data/              # Created automatically for conversation storage
+│   ├── example.yaml         # Template configuration
+│   └── *.yaml              # Individual bot configurations
+└── data/                   # Created automatically for conversation storage
 ```
