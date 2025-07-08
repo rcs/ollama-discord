@@ -347,5 +347,164 @@ async def test_integration_multiple_bots_coordination():
     assert result2 is False  # Should be rejected due to coordination
 
 
+class TestChannelPatternMatching:
+    """Test comprehensive channel pattern matching business logic."""
+    
+    @pytest.fixture
+    def coordinator(self):
+        storage = MockMessageStorage()
+        rate_limiter = MockRateLimiter()
+        global_settings = {'max_concurrent_responses': 2, 'response_delay': '0-0', 'cooldown_period': 0}
+        return MessageCoordinator(storage, rate_limiter, global_settings)
+    
+    @pytest.mark.asyncio
+    async def test_exact_channel_match(self, coordinator):
+        """Test exact channel name matching."""
+        message = MockDiscordMessage("Hello", channel_name="general")
+        
+        # Should match exact channel name
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is True
+        
+        # Should not match different channel
+        result = await coordinator.should_handle_message("bot", message, ["random"])
+        assert result is False
+    
+    @pytest.mark.asyncio 
+    async def test_wildcard_channel_patterns(self, coordinator):
+        """Test wildcard pattern matching for channels."""
+        # Test prefix wildcard
+        message = MockDiscordMessage("Hello", channel_name="tech-support")
+        result = await coordinator.should_handle_message("bot", message, ["tech-*"])
+        assert result is True
+        
+        message = MockDiscordMessage("Hello", channel_name="tech-help") 
+        result = await coordinator.should_handle_message("bot", message, ["tech-*"])
+        assert result is True
+        
+        message = MockDiscordMessage("Hello", channel_name="support-tech")
+        result = await coordinator.should_handle_message("bot", message, ["tech-*"]) 
+        assert result is False
+        
+        # Test suffix wildcard
+        message = MockDiscordMessage("Hello", channel_name="support-general")
+        result = await coordinator.should_handle_message("bot", message, ["*-general"])
+        assert result is True
+        
+        # Test middle wildcard
+        message = MockDiscordMessage("Hello", channel_name="bot-test-channel")
+        result = await coordinator.should_handle_message("bot", message, ["bot-*-channel"])
+        assert result is True
+    
+    @pytest.mark.asyncio
+    async def test_multiple_pattern_matching(self, coordinator):
+        """Test that bot matches if ANY pattern matches."""
+        message = MockDiscordMessage("Hello", channel_name="general")
+        
+        # Should match first pattern
+        patterns = ["general", "tech-*", "support"]
+        result = await coordinator.should_handle_message("bot", message, patterns)
+        assert result is True
+        
+        # Should match second pattern  
+        message = MockDiscordMessage("Hello", channel_name="tech-help")
+        result = await coordinator.should_handle_message("bot", message, patterns)
+        assert result is True
+        
+        # Should not match any pattern
+        message = MockDiscordMessage("Hello", channel_name="random-stuff")
+        result = await coordinator.should_handle_message("bot", message, patterns)
+        assert result is False
+    
+    @pytest.mark.asyncio
+    async def test_case_insensitive_matching(self, coordinator):
+        """Test that channel matching is case insensitive."""
+        message = MockDiscordMessage("Hello", channel_name="General")
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is True
+        
+        message = MockDiscordMessage("Hello", channel_name="TECH-SUPPORT")
+        result = await coordinator.should_handle_message("bot", message, ["tech-*"])
+        assert result is True
+
+
+class TestBusinessLogicEdgeCases:
+    """Test edge cases in core business logic."""
+    
+    @pytest.fixture
+    def coordinator(self):
+        storage = MockMessageStorage()
+        rate_limiter = MockRateLimiter()
+        global_settings = {'max_concurrent_responses': 1, 'response_delay': '1-2', 'cooldown_period': 0}
+        return MessageCoordinator(storage, rate_limiter, global_settings)
+    
+    @pytest.mark.asyncio
+    async def test_empty_message_content(self, coordinator):
+        """Test handling of empty or whitespace-only messages."""
+        message = MockDiscordMessage("", channel_name="general")
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is True  # Empty messages should be allowed
+        
+        message = MockDiscordMessage("   ", channel_name="general") 
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is True  # Whitespace messages should be allowed
+    
+    @pytest.mark.asyncio
+    async def test_command_detection_edge_cases(self, coordinator):
+        """Test command detection with various formats."""
+        # Standard command should be rejected
+        message = MockDiscordMessage("!help", channel_name="general")
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is False
+        
+        # Command with args should be rejected
+        message = MockDiscordMessage("!ask What is the weather?", channel_name="general")
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is False
+        
+        # Exclamation in middle should be allowed
+        message = MockDiscordMessage("Hello! How are you?", channel_name="general")
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is True
+        
+        # Multiple exclamations at start still counts as command
+        message = MockDiscordMessage("!!test", channel_name="general")
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is False
+    
+    @pytest.mark.asyncio
+    async def test_bot_coordination_timing(self, coordinator):
+        """Test bot coordination prevents response conflicts."""
+        message = MockDiscordMessage("Hello", channel_name="general")
+        channel_id = message.channel.id
+        
+        # First bot starts responding
+        await coordinator.mark_bot_responding("bot1", channel_id)
+        
+        # Second bot should be rejected due to active response
+        result = await coordinator.should_handle_message("bot2", message, ["general"])
+        assert result is False
+        
+        # After first bot completes, second bot should be allowed
+        await coordinator.mark_response_complete("bot1", channel_id)
+        result = await coordinator.should_handle_message("bot2", message, ["general"])
+        assert result is True
+    
+    @pytest.mark.asyncio
+    async def test_rate_limiting_per_user(self, coordinator):
+        """Test that rate limiting is enforced per user.""" 
+        # Setup rate limiter to reject requests
+        coordinator.rate_limiter.allow_requests = False
+        
+        message = MockDiscordMessage("Hello", channel_name="general")
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is False  # Should be rejected due to rate limiting
+        
+        # Re-enable rate limiting
+        coordinator.rate_limiter.allow_requests = True
+        result = await coordinator.should_handle_message("bot", message, ["general"])
+        assert result is True  # Should now be allowed
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

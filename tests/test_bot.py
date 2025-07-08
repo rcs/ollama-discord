@@ -20,35 +20,8 @@ class TestDiscordBot:
             logging=LoggingConfig()
         )
     
-    def test_bot_initialization_requires_orchestrator(self):
-        """Test that bot requires orchestrator in new architecture."""
-        config = self.create_test_config()
-        mock_orchestrator = Mock(spec=BotOrchestrator)
-        
-        bot = DiscordBot(config, orchestrator=mock_orchestrator)
-        assert bot is not None
-        assert bot.config == config
-        assert bot.orchestrator == mock_orchestrator
     
-    def test_bot_initialization_with_orchestrator(self):
-        """Test that bot can be initialized with orchestrator."""
-        config = self.create_test_config()
-        mock_orchestrator = Mock(spec=BotOrchestrator)
-        channel_patterns = ["general", "test-*"]
-        
-        bot = DiscordBot(config, orchestrator=mock_orchestrator, channel_patterns=channel_patterns)
-        assert bot is not None
-        assert bot.config == config
-        assert bot.orchestrator == mock_orchestrator
-        assert bot.channel_patterns == channel_patterns
     
-    def test_bot_config_validation(self):
-        """Test that bot validates config properly."""
-        config = self.create_test_config()
-        mock_orchestrator = Mock(spec=BotOrchestrator)
-        # This should not raise an exception
-        bot = DiscordBot(config, orchestrator=mock_orchestrator)
-        assert bot is not None
     
     @pytest.mark.asyncio
     async def test_on_message_with_orchestrator(self):
@@ -92,19 +65,6 @@ class TestDiscordBot:
         )
 
 
-class TestConfig:
-    """Test cases for the Config class."""
-    
-    def test_config_creation(self):
-        """Test that config can be created with required fields."""
-        config = Config(
-            bot=BotConfig(name="test-bot"),
-            discord=DiscordConfig(token="test-token"),
-            ollama=OllamaConfig()
-        )
-        assert config is not None
-        assert config.bot.name == "test-bot"
-        assert config.discord.token == "test-token"
 
 
 class TestMessageFormatting:
