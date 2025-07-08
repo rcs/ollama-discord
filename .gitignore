@@ -54,3 +54,6 @@ config/secrets.yaml
 *.key
 *.pem
 secrets/
+
+# Claude Code settings
+.claude/settings.local.json
