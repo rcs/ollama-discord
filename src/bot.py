@@ -1,12 +1,13 @@
 """Discord bot with Ollama integration - Multi-bot architecture only."""
 
+import logging
 from typing import List, Optional
 
 import discord
 
 from .config import Config, setup_logging
 from .domain_services import BotOrchestrator
-from .debug_utils import debug_manager, track_message_flow
+from .debug_utils import debug_manager
 
 
 def format_message_for_discord(content: str, max_length: int = 2000) -> List[str]:
@@ -114,7 +115,8 @@ class DiscordBot:
     def __init__(self, config: Config, orchestrator: BotOrchestrator, 
                  channel_patterns: Optional[List[str]] = None):
         self.config = config
-        self.logger = setup_logging(config.logging, config.bot.name)
+        # Use centralized logger instead of individual bot logging config
+        self.logger = logging.getLogger(f'ollama-discord.{config.bot.name.upper()}')
         self.orchestrator = orchestrator
         self.channel_patterns = channel_patterns or []
         

@@ -12,7 +12,7 @@ Discord bot system with Ollama integration that supports multiple bot configurat
 - **Multi-bot only**: Simplified architecture supports only multi-bot configuration
 - **Configuration-driven**: YAML-based configuration with Pydantic validation
 - **Domain-driven design**: Business logic separated from infrastructure concerns
-- **Conversation storage**: Persistent conversation history per user/channel
+- **Conversation storage**: Persistent conversation history per user/channel (File or SQLite)
 - **Bot coordination**: Intelligent coordination prevents simultaneous responses
 
 ## Key Components
@@ -107,7 +107,7 @@ Each bot has its own configuration file with:
 - **discord**: Token and command prefix  
 - **ollama**: Model, base URL, timeout settings
 - **system_prompt**: Custom system prompt for the bot
-- **storage**: Conversation history settings (path, max history)
+- **storage**: Conversation history settings (path, max history, storage type)
 - **message**: Message handling (max length, typing indicator)
 - **rate_limit**: Request rate limiting configuration
 - **logging**: Logging level and format
@@ -120,6 +120,24 @@ The main configuration file that orchestrates multiple bots:
 - **coordination**: Settings for preventing response conflicts between bots
 
 Environment variables can be used in configs with `${VAR_NAME}` syntax.
+
+### Storage Migration
+
+To migrate from file storage to SQLite storage:
+
+1. **Backup existing data**: `cp -r data/ data_backup/`
+2. **Run migration script**: `bin/python scripts/migrate_to_sqlite.py`
+3. **Update configuration**: Change `storage_type: "sqlite"` in `config/multi_bot.yaml`
+4. **Restart the bot**: The bot will now use the SQLite database
+
+**Migration Options:**
+```bash
+# Preview what will be migrated
+bin/python scripts/migrate_to_sqlite.py --dry-run
+
+# Migrate with custom paths
+bin/python scripts/migrate_to_sqlite.py --data-dir ./data/old --db-path ./data/new.db
+```
 
 ### Environment File (.env)
 
@@ -144,6 +162,32 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 
 All configuration files use `${DISCORD_TOKEN}` to read the token from environment variables or the .env file.
 
+## Storage Configuration
+
+The system supports two storage backends for conversation history:
+
+### File Storage (Default)
+```yaml
+global_settings:
+  storage_type: "file"
+  storage_path: "./data/multi_bot_conversations"
+```
+
+### SQLite Storage
+```yaml
+global_settings:
+  storage_type: "sqlite"
+  storage_path: "./data/conversations.db"
+  session_timeout: 3600  # Session timeout in seconds
+```
+
+**SQLite Benefits:**
+- Better performance for large conversation histories
+- Concurrent access support
+- Automatic session management
+- Built-in cleanup and maintenance
+- SQL query capabilities for analytics
+
 ## Dependencies
 
 - `discord.py>=2.3.0`: Discord API wrapper
@@ -151,6 +195,7 @@ All configuration files use `${DISCORD_TOKEN}` to read the token from environmen
 - `pydantic>=2.0.0`: Configuration validation
 - `pyyaml>=6.0.0`: YAML configuration parsing
 - `click>=8.0.0`: CLI interface
+- `aiosqlite>=0.20.0`: Async SQLite library (for SQLite storage)
 
 ## External Requirements
 

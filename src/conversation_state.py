@@ -3,11 +3,10 @@
 import asyncio
 import json
 import logging
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from pathlib import Path
-from dataclasses import dataclass, asdict
-from collections import defaultdict
+from dataclasses import dataclass
 import threading
 
 
@@ -102,11 +101,13 @@ class ConversationContext:
 
 
 class ConversationState:
-    """Manages shared conversation state across multiple bots."""
+    """Manages conversation state for a specific bot."""
     
-    def __init__(self, storage_path: str = "./data/multi_bot_conversations", 
+    def __init__(self, bot_name: str, storage_path: str = "./data/multi_bot_conversations", 
                  context_depth: int = 10, max_history: int = 1000):
-        self.storage_path = Path(storage_path)
+        self.bot_name = bot_name
+        # Create bot-specific storage path
+        self.storage_path = Path(storage_path) / bot_name
         self.context_depth = context_depth
         self.max_history = max_history
         self.logger = logging.getLogger(__name__)
@@ -127,8 +128,9 @@ class ConversationState:
         self._initialize_storage()
     
     def _initialize_storage(self):
-        """Initialize storage directory."""
+        """Initialize bot-specific storage directory."""
         self.storage_path.mkdir(parents=True, exist_ok=True)
+        self.logger.info(f"Initialized conversation storage for bot '{self.bot_name}' at {self.storage_path}")
         self.logger.info(f"Initialized conversation storage at {self.storage_path}")
     
     def _get_conversation_key(self, channel_id: int, user_id: int) -> str:
@@ -180,9 +182,13 @@ class ConversationState:
         )
     
     async def add_message(self, channel_id: int, user_id: int, role: str, content: str,
-                         bot_name: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> ConversationMessage:
+                          bot_name: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None) -> ConversationMessage:
         """Add a message to the conversation."""
         conversation_key = self._get_conversation_key(channel_id, user_id)
+        
+        # DEBUG: Log message storage
+        bot_info = f" (bot: {bot_name})" if bot_name else ""
+        self.logger.debug(f"💾 STORING MESSAGE: {role.upper()}{bot_info} in {conversation_key}: '{content[:100]}...'")
         
         # Create message
         message = ConversationMessage(
@@ -191,8 +197,7 @@ class ConversationState:
             timestamp=datetime.now(),
             bot_name=bot_name,
             metadata=metadata or {}
-        )
-        
+        )        
         # Get conversation context
         context = await self.get_context(channel_id, user_id)
         

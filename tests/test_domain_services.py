@@ -182,7 +182,7 @@ class TestResponseGenerator:
     def response_generator(self):
         ai_model = MockAIModel("Test response")
         storage = MockMessageStorage()
-        return ResponseGenerator(ai_model, storage)
+        return ResponseGenerator(ai_model, storage, system_prompt="You are a helpful AI assistant.", bot_name="test-bot")
     
     @pytest.mark.asyncio
     async def test_generate_response_success(self, response_generator):
@@ -198,7 +198,7 @@ class TestResponseGenerator:
         # Check that system prompt was included
         messages = response_generator.ai_model.last_messages
         assert any(msg.get('role') == 'system' for msg in messages)
-        assert any('sage' in msg.get('content', '').lower() for msg in messages if msg.get('role') == 'system')
+        assert any('helpful ai assistant' in msg.get('content', '').lower() for msg in messages if msg.get('role') == 'system')
     
     @pytest.mark.asyncio
     async def test_generate_response_with_context(self, response_generator):
@@ -259,7 +259,7 @@ class TestBotOrchestrator:
         
         coordinator = MessageCoordinator(storage, rate_limiter, global_settings)
         ai_model = MockAIModel("Orchestrator response")
-        response_generator = ResponseGenerator(ai_model, storage)
+        response_generator = ResponseGenerator(ai_model, storage, system_prompt="You are a helpful AI assistant.", bot_name="test-bot")
         
         return BotOrchestrator(coordinator, response_generator, storage, rate_limiter, notification_sender)
     

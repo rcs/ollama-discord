@@ -44,6 +44,7 @@ def temp_config_dir():
                 {
                     'name': 'test-bot',
                     'config_file': str(bot_config_file),
+                    'discord_token': 'fake_token',
                     'channels': ['test-channel']
                 }
             ],
@@ -105,6 +106,7 @@ class TestMultiBotConfig:
         bot_config = BotInstanceConfig(
             name='test',
             config_file='test.yaml',
+            discord_token='fake_token',
             channels=['test']
         )
         global_settings = GlobalSettings(context_depth=10)
@@ -122,6 +124,7 @@ class TestMultiBotConfig:
         bot_config = BotInstanceConfig(
             name='test',
             config_file='test.yaml',
+            discord_token='fake_token',
             channels=['test']
         )
         
@@ -175,6 +178,7 @@ class TestBotManagerValidation:
                 {
                     'name': '',  # Empty name
                     'config_file': 'test.yaml',
+                    'discord_token': 'fake_token',
                     'channels': ['test']
                 }
             ]
@@ -197,6 +201,7 @@ class TestBotManagerValidation:
                 {
                     'name': 'test-bot',
                     'config_file': 'test.yaml',
+                    'discord_token': 'fake_token',
                     'channels': []  # Empty channels
                 }
             ]
@@ -246,6 +251,7 @@ class TestBotManagerValidation:
                 {
                     'name': 'test-bot',
                     'config_file': '',  # Empty config_file
+                    'discord_token': 'fake_token',
                     'channels': ['test']
                 }
             ]
@@ -268,15 +274,24 @@ class TestBotManager:
         await bot_manager.initialize()
         
         assert bot_manager.multi_bot_config is not None
-        assert bot_manager.conversation_state is not None
         
-        # Check new services created by service factory
-        assert bot_manager.orchestrator is not None
-        assert bot_manager.coordinator is not None
-        assert bot_manager.response_generator is not None
+        # Check shared services
+        assert bot_manager.shared_coordinator is not None
+        assert bot_manager.shared_ai_model is not None
+        assert bot_manager.shared_rate_limiter is not None
+        assert bot_manager.shared_notification_sender is not None
         
+        # Check bot instances and their services
         assert len(bot_manager.bot_instances) == 1
         assert 'test-bot' in bot_manager.bot_instances
+        assert 'test-bot' in bot_manager.bot_services
+        
+        # Check bot-specific services
+        bot_services = bot_manager.bot_services['test-bot']
+        assert bot_services.orchestrator is not None
+        assert bot_services.response_generator is not None
+        assert bot_services.storage is not None
+        assert bot_services.conversation_state is not None
     
     @pytest.mark.asyncio
     
@@ -331,9 +346,10 @@ class TestBotManager:
             assert instance.is_running is True
             assert instance.bot == mock_bot
             # DiscordBot should be called with orchestrator and channel patterns
+            bot_services = bot_manager.bot_services['test-bot']
             mock_discord_bot.assert_called_once_with(
                 config=instance.config,
-                orchestrator=bot_manager.orchestrator,
+                orchestrator=bot_services.orchestrator,
                 channel_patterns=instance.channels
             )
             mock_bot.client.start.assert_called_once_with(instance.config.discord.token)
@@ -433,7 +449,7 @@ class TestBotManagerIntegration:
         
         # Verify all components are initialized
         assert manager.multi_bot_config is not None
-        assert manager.conversation_state is not None
+        assert manager.bot_services['test-bot'].conversation_state is not None
         assert len(manager.bot_instances) == 1
         
         # Verify bot instance configuration
@@ -453,6 +469,7 @@ class TestBotManagerIntegration:
                 {
                     'name': 'invalid-bot',
                     'config_file': 'nonexistent.yaml',
+                    'discord_token': 'fake_token',
                     'channels': ['test']
                 }
             ],

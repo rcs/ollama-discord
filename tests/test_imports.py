@@ -46,11 +46,7 @@ class TestModuleImports:
         # Test multi-bot config models
         response_config = ResponseBehaviorConfig()
         persona_config = PersonaConfig(name="test", description="test")
-        bot_config = BotInstanceConfig(
-            name="test", 
-            config_file="test.yaml", 
-            channels=["test"]
-        )
+        bot_config = BotInstanceConfig(name="test", config_file="test.yaml", discord_token="fake_token", channels=["test"])
         global_settings = GlobalSettings()
         multi_config = MultiBotConfig(bots=[bot_config], global_settings=global_settings)
         
@@ -169,11 +165,7 @@ class TestServiceDependencies:
         from src.multi_bot_config import MultiBotConfig, BotInstanceConfig, GlobalSettings
         
         # Create minimal config
-        bot_config = BotInstanceConfig(
-            name="test", 
-            config_file="test.yaml", 
-            channels=["test"]
-        )
+        bot_config = BotInstanceConfig(name="test", config_file="test.yaml", discord_token="fake_token", channels=["test"])
         multi_config = MultiBotConfig(bots=[bot_config])
         
         # Test service creation doesn't crash

@@ -27,3 +27,9 @@
 - **Naming**: snake_case for functions/variables, PascalCase for classes, UPPER_CASE for constants
 - **Async**: Use `AsyncMock` for testing async functions, mark tests with `@pytest.mark.asyncio`
 - **Configuration**: Use Pydantic models with field validation for all config classes
+
+## Testing Requirements
+- **CRITICAL**: You MUST run all tests to green, aligned with original intent of the test, before committing code
+- **No exceptions**: All tests must pass before any commit is made
+- **Test integrity**: When updating code, ensure tests still validate the original intended behavior
+- **Fix broken tests**: If your changes break existing tests, you must fix the tests to work with your changes while preserving their original testing intent

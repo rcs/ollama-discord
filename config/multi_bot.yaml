@@ -5,6 +5,7 @@
 bots:
   - name: "sage"
     config_file: "sage.yaml"
+    discord_token: "${DISCORD_TOKEN_SAGE}"
     channels: 
       - "bambam"
       - "general"
@@ -41,6 +42,7 @@ bots:
 
   - name: "spark"
     config_file: "spark.yaml"
+    discord_token: "${DISCORD_TOKEN_SPARK}"
     channels:
       - "bambam"
       - "creative"
@@ -78,6 +80,7 @@ bots:
 
   - name: "logic"
     config_file: "logic.yaml"
+    discord_token: "${DISCORD_TOKEN_LOGIC}"
     channels:
       - "bambam"
       - "tech-*"
@@ -126,6 +129,8 @@ global_settings:
   
   # Storage settings
   storage_path: "./data/multi_bot_conversations"
+  storage_type: "file"  # "file" or "sqlite"
+  session_timeout: 3600  # SQLite session timeout in seconds
   
   # Bot interaction settings
   enable_cross_bot_context: true  # Bots can see each other's messages
@@ -147,7 +152,7 @@ global_settings:
 # Logging configuration for multi-bot system
 logging:
   level: "DEBUG"
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  format: "%(asctime)s - [%(name)s] %(levelname)s - %(message)s"
   file: "./logs/multi_bot.log"
   max_file_size: "10MB"
   backup_count: 5

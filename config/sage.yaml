@@ -61,7 +61,3 @@ message:
 rate_limit:
   enabled: true
   max_requests_per_minute: 8
-
-logging:
-  level: "DEBUG"
-  format: "%(asctime)s - [SAGE] %(levelname)s - %(message)s"

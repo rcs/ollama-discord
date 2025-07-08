@@ -24,6 +24,7 @@ def temp_storage_path():
 def conversation_state(temp_storage_path):
     """Create a ConversationState instance."""
     return ConversationState(
+        bot_name="test-bot",
         storage_path=temp_storage_path,
         context_depth=5,
         max_history=100
@@ -180,7 +181,7 @@ class TestConversationState:
     
     def test_initialization(self, conversation_state, temp_storage_path):
         """Test ConversationState initialization."""
-        assert conversation_state.storage_path == Path(temp_storage_path)
+        assert conversation_state.storage_path == Path(temp_storage_path) / "test-bot"
         assert conversation_state.context_depth == 5
         assert conversation_state.max_history == 100
         assert len(conversation_state._conversations) == 0
