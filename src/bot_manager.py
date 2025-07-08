@@ -88,12 +88,12 @@ class BotManager:
         # Validate individual bot configurations
         for i, bot_config in enumerate(self.multi_bot_config.bots):
             # Bot config is already a proper Pydantic model, access fields directly
-            required_fields = ['name', 'config_file', 'channels']
-            
             if not bot_config.name:
                 raise ValueError(f"Bot configuration {i} missing required field: name")
             if not bot_config.config_file:
                 raise ValueError(f"Bot configuration {i} missing required field: config_file")
+            if not bot_config.discord_token:
+                raise ValueError(f"Bot configuration {i} missing required field: discord_token")
             if not bot_config.channels:
                 raise ValueError(f"Bot {bot_config.name} must have at least one channel")
         
@@ -107,6 +107,7 @@ class BotManager:
             bot_name = bot_config.name
             config_file = bot_config.config_file
             channels = bot_config.channels
+            discord_token = bot_config.discord_token
             
             if not bot_name or not config_file:
                 self.logger.warning(f"Skipping invalid bot configuration: {bot_config}")
@@ -120,6 +121,9 @@ class BotManager:
                 
                 bot_config_obj = load_config(str(config_path))
                 
+                # Override the Discord token from multi-bot config
+                bot_config_obj.discord.token = discord_token
+                
                 # Create bot instance
                 bot_instance = BotInstance(
                     name=bot_name,
@@ -128,7 +132,7 @@ class BotManager:
                 )
                 
                 self.bot_instances[bot_name] = bot_instance
-                self.logger.info(f"Loaded configuration for bot: {bot_name}")
+                self.logger.info(f"Loaded configuration for bot: {bot_name} with token override")
                 
             except Exception as e:
                 self.logger.error(f"Failed to load configuration for bot {bot_name}: {e}")

@@ -21,10 +21,9 @@ class TestServiceCreation:
     
     def test_create_multi_bot_services_basic(self):
         """Test creating services with basic configuration."""
-        bot_config = BotInstanceConfig(
-            name="test-bot",
+        bot_config = BotInstanceConfig(name="test-bot",
             config_file="test.yaml",
-            channels=["general"]
+            discord_token="fake_token", channels=["general"]
         )
         
         multi_config = MultiBotConfig(
@@ -47,9 +46,9 @@ class TestServiceCreation:
     def test_create_multi_bot_services_with_multiple_bots(self):
         """Test creating services with multiple bots."""
         bot_configs = [
-            BotInstanceConfig(name="bot1", config_file="bot1.yaml", channels=["general"]),
-            BotInstanceConfig(name="bot2", config_file="bot2.yaml", channels=["test"]),
-            BotInstanceConfig(name="bot3", config_file="bot3.yaml", channels=["dev"])
+            BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token", channels=["general"]),
+            BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token", channels=["test"]),
+            BotInstanceConfig(name="bot3", config_file="bot3.yaml", discord_token="fake_token", channels=["dev"])
         ]
         
         multi_config = MultiBotConfig(
@@ -71,10 +70,9 @@ class TestServiceCreation:
     
     def test_create_multi_bot_services_with_custom_settings(self):
         """Test creating services with custom global settings."""
-        bot_config = BotInstanceConfig(
-            name="custom-bot",
+        bot_config = BotInstanceConfig(name="custom-bot",
             config_file="custom.yaml",
-            channels=["custom"]
+            discord_token="fake_token", channels=["custom"]
         )
         
         global_settings = GlobalSettings(
@@ -406,10 +404,9 @@ class TestServiceInitializationFailures:
         """Test service creation with empty bots list."""
         # Note: MultiBotConfig validation should prevent empty bots,
         # but we can test the service factory behavior directly
-        bot_config = BotInstanceConfig(
-            name="dummy-bot",
+        bot_config = BotInstanceConfig(name="dummy-bot",
             config_file="dummy.yaml",
-            channels=["dummy"]
+            discord_token="fake_token", channels=["dummy"]
         )
         
         multi_config = MultiBotConfig(
@@ -430,10 +427,9 @@ class TestServiceInitializationFailures:
     
     def test_create_services_with_invalid_global_settings(self):
         """Test service creation with potentially problematic global settings."""
-        bot_config = BotInstanceConfig(
-            name="test-bot",
+        bot_config = BotInstanceConfig(name="test-bot",
             config_file="test.yaml",
-            channels=["general"]
+            discord_token="fake_token", channels=["general"]
         )
         
         # Test with extreme values
@@ -471,10 +467,9 @@ class TestServiceDependencyInjection:
     
     def test_service_dependencies_are_properly_wired(self):
         """Test that services receive proper dependencies."""
-        bot_config = BotInstanceConfig(
-            name="dependency-bot",
+        bot_config = BotInstanceConfig(name="dependency-bot",
             config_file="dependency.yaml",
-            channels=["dependency-test"]
+            discord_token="fake_token", channels=["dependency-test"]
         )
         
         multi_config = MultiBotConfig(
@@ -505,10 +500,9 @@ class TestServiceDependencyInjection:
     
     def test_service_circular_dependencies(self):
         """Test handling of circular service dependencies."""
-        bot_config = BotInstanceConfig(
-            name="circular-bot",
+        bot_config = BotInstanceConfig(name="circular-bot",
             config_file="circular.yaml",
-            channels=["circular-test"]
+            discord_token="fake_token", channels=["circular-test"]
         )
         
         multi_config = MultiBotConfig(

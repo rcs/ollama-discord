@@ -1,9 +1,7 @@
 """Pure domain logic for the ollama-discord bot system."""
 
-import asyncio
 import logging
 import re
-import random
 from typing import Dict, List, Optional, Set, Tuple, Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass
@@ -12,7 +10,7 @@ import discord
 
 from .ports import MessageStorage, AIModel, RateLimiter, NotificationSender
 from .conversation_state import ConversationContext
-from .debug_utils import debug_manager, track_message_flow
+from .debug_utils import debug_manager
 from .debug_commands import debug_handler
 
 

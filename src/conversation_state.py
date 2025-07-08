@@ -3,11 +3,10 @@
 import asyncio
 import json
 import logging
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from pathlib import Path
-from dataclasses import dataclass, asdict
-from collections import defaultdict
+from dataclasses import dataclass
 import threading
 
 

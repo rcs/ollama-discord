@@ -6,7 +6,7 @@ import discord
 
 from .config import Config, setup_logging
 from .domain_services import BotOrchestrator
-from .debug_utils import debug_manager, track_message_flow
+from .debug_utils import debug_manager
 
 
 def format_message_for_discord(content: str, max_length: int = 2000) -> List[str]:

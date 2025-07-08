@@ -3,7 +3,6 @@
 import requests
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from pathlib import Path
 
 from .ports import MessageStorage, AIModel, RateLimiter, NotificationSender
 from .conversation_state import ConversationState, ConversationMessage, ConversationContext

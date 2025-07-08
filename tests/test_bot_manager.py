@@ -44,6 +44,7 @@ def temp_config_dir():
                 {
                     'name': 'test-bot',
                     'config_file': str(bot_config_file),
+                    'discord_token': 'fake_token',
                     'channels': ['test-channel']
                 }
             ],
@@ -105,6 +106,7 @@ class TestMultiBotConfig:
         bot_config = BotInstanceConfig(
             name='test',
             config_file='test.yaml',
+            discord_token='fake_token',
             channels=['test']
         )
         global_settings = GlobalSettings(context_depth=10)
@@ -122,6 +124,7 @@ class TestMultiBotConfig:
         bot_config = BotInstanceConfig(
             name='test',
             config_file='test.yaml',
+            discord_token='fake_token',
             channels=['test']
         )
         
@@ -175,6 +178,7 @@ class TestBotManagerValidation:
                 {
                     'name': '',  # Empty name
                     'config_file': 'test.yaml',
+                    'discord_token': 'fake_token',
                     'channels': ['test']
                 }
             ]
@@ -197,6 +201,7 @@ class TestBotManagerValidation:
                 {
                     'name': 'test-bot',
                     'config_file': 'test.yaml',
+                    'discord_token': 'fake_token',
                     'channels': []  # Empty channels
                 }
             ]
@@ -246,6 +251,7 @@ class TestBotManagerValidation:
                 {
                     'name': 'test-bot',
                     'config_file': '',  # Empty config_file
+                    'discord_token': 'fake_token',
                     'channels': ['test']
                 }
             ]
@@ -453,6 +459,7 @@ class TestBotManagerIntegration:
                 {
                     'name': 'invalid-bot',
                     'config_file': 'nonexistent.yaml',
+                    'discord_token': 'fake_token',
                     'channels': ['test']
                 }
             ],

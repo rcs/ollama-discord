@@ -42,10 +42,9 @@ class TestServiceFactory:
         """Test creating services for multi-bot deployment."""
         multi_bot_config = MultiBotConfig(
             bots=[
-                BotInstanceConfig(
-                    name="bot1",
+                BotInstanceConfig(name="bot1",
                     config_file="config/bot1.yaml",
-                    channels=["general"]
+                    discord_token="fake_token", channels=["general"]
                 )
             ],
             global_settings=GlobalSettings(

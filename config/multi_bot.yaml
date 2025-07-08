@@ -5,6 +5,7 @@
 bots:
   - name: "sage"
     config_file: "sage.yaml"
+    discord_token: "${DISCORD_TOKEN_SAGE}"
     channels: 
       - "bambam"
       - "general"
@@ -41,6 +42,7 @@ bots:
 
   - name: "spark"
     config_file: "spark.yaml"
+    discord_token: "${DISCORD_TOKEN_SPARK}"
     channels:
       - "bambam"
       - "creative"
@@ -78,6 +80,7 @@ bots:
 
   - name: "logic"
     config_file: "logic.yaml"
+    discord_token: "${DISCORD_TOKEN_LOGIC}"
     channels:
       - "bambam"
       - "tech-*"

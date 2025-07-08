@@ -6,8 +6,9 @@ from typing import Optional, Dict, Any, List
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
 import logging
+from dotenv import load_dotenv
 
-from .config import Config, load_config
+from .config import load_config
 
 
 class ResponseBehaviorConfig(BaseModel):
@@ -39,6 +40,7 @@ class BotInstanceConfig(BaseModel):
     """Configuration for a single bot instance in multi-bot deployment."""
     name: str
     config_file: str
+    discord_token: str
     channels: List[str] = Field(default_factory=list)
     persona: Optional[PersonaConfig] = None
     response_behavior: ResponseBehaviorConfig = ResponseBehaviorConfig()
@@ -58,6 +60,13 @@ class BotInstanceConfig(BaseModel):
         if not v:
             raise ValueError("At least one channel must be specified")
         return v
+    
+    @field_validator('discord_token')
+    @classmethod
+    def validate_discord_token(cls, v):
+        if not v or not v.strip():
+            raise ValueError("Discord token is required and cannot be empty")
+        return v.strip()
 
 
 class GlobalSettings(BaseModel):
@@ -108,6 +117,11 @@ class MultiBotConfig(BaseModel):
         bot_names = [bot.name for bot in v]
         if len(bot_names) != len(set(bot_names)):
             raise ValueError("Bot names must be unique")
+        
+        # Check for duplicate Discord tokens
+        bot_tokens = [bot.discord_token for bot in v]
+        if len(bot_tokens) != len(set(bot_tokens)):
+            raise ValueError("Discord tokens must be unique across all bots")
         
         return v
     
@@ -169,6 +183,12 @@ class MultiBotConfigManager:
     
     def load_multi_bot_config(self, config_path: str) -> MultiBotConfig:
         """Load multi-bot configuration from YAML file."""
+        # Load .env file if it exists (looks for .env in current working directory)
+        env_file = Path('.env')
+        if env_file.exists():
+            load_dotenv(env_file)
+            self.logger.info(f"Loaded environment variables from {env_file}")
+        
         config_file = Path(config_path)
         
         if not config_file.exists():
@@ -211,7 +231,7 @@ class MultiBotConfigManager:
             
             # Try to load and validate the individual bot config
             try:
-                individual_config = load_config(str(config_file))
+                load_config(str(config_file))
                 self.logger.info(f"Validated configuration for bot: {bot_config.name}")
             except Exception as e:
                 raise ValueError(f"Invalid configuration for bot {bot_config.name}: {e}")
@@ -223,6 +243,7 @@ class MultiBotConfigManager:
                 {
                     'name': 'sage',
                     'config_file': 'config/sage.yaml',
+                    'discord_token': '${DISCORD_TOKEN_SAGE}',
                     'channels': ['general', 'advice-*'],
                     'persona': {
                         'name': 'Sage',
@@ -243,6 +264,7 @@ class MultiBotConfigManager:
                 {
                     'name': 'spark',
                     'config_file': 'config/spark.yaml',
+                    'discord_token': '${DISCORD_TOKEN_SPARK}',
                     'channels': ['creative', 'projects-*'],
                     'persona': {
                         'name': 'Spark',
@@ -263,6 +285,7 @@ class MultiBotConfigManager:
                 {
                     'name': 'logic',
                     'config_file': 'config/logic.yaml',
+                    'discord_token': '${DISCORD_TOKEN_LOGIC}',
                     'channels': ['tech-*', 'research'],
                     'persona': {
                         'name': 'Logic',

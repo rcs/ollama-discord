@@ -80,10 +80,9 @@ class TestBotInstanceConfig:
     
     def test_basic_bot_config(self):
         """Test basic bot configuration."""
-        config = BotInstanceConfig(
-            name="test-bot",
+        config = BotInstanceConfig(name="test-bot",
             config_file="test.yaml",
-            channels=["general"]
+            discord_token="fake_token_1", channels=["general"]
         )
         
         assert config.name == "test-bot"
@@ -98,10 +97,9 @@ class TestBotInstanceConfig:
         persona = PersonaConfig(name="TestBot")
         behavior = ResponseBehaviorConfig(engagement_threshold=0.5)
         
-        config = BotInstanceConfig(
-            name="test-bot",
+        config = BotInstanceConfig(name="test-bot",
             config_file="test.yaml",
-            channels=["general", "test-*"],
+            discord_token="fake_token_1", channels=["general", "test-*"],
             persona=persona,
             response_behavior=behavior,
             enabled=False,
@@ -166,10 +164,9 @@ class TestMultiBotConfig:
     
     def test_basic_multibot_config(self):
         """Test basic multi-bot configuration."""
-        bot_config = BotInstanceConfig(
-            name="test-bot",
+        bot_config = BotInstanceConfig(name="test-bot",
             config_file="test.yaml",
-            channels=["test"]
+            discord_token="fake_token_1", channels=["test"]
         )
         
         config = MultiBotConfig(
@@ -184,8 +181,8 @@ class TestMultiBotConfig:
     
     def test_get_bot_config(self):
         """Test getting specific bot configuration."""
-        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", channels=["ch1"])
-        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", channels=["ch2"])
+        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token_1", channels=["ch1"])
+        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token_2", channels=["ch2"])
         
         config = MultiBotConfig(bots=[bot1, bot2])
         
@@ -195,9 +192,9 @@ class TestMultiBotConfig:
     
     def test_get_enabled_bots(self):
         """Test getting enabled bots."""
-        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", channels=["ch1"], enabled=True)
-        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", channels=["ch2"], enabled=False)
-        bot3 = BotInstanceConfig(name="bot3", config_file="bot3.yaml", channels=["ch3"], enabled=True)
+        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token_1", channels=["ch1"], enabled=True)
+        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token_2", channels=["ch2"], enabled=False)
+        bot3 = BotInstanceConfig(name="bot3", config_file="bot3.yaml", discord_token="fake_token_3", channels=["ch3"], enabled=True)
         
         config = MultiBotConfig(bots=[bot1, bot2, bot3])
         enabled = config.get_enabled_bots()
@@ -209,9 +206,9 @@ class TestMultiBotConfig:
     
     def test_get_bots_for_channel(self):
         """Test getting bots for specific channel."""
-        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", channels=["general"], priority=1)
-        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", channels=["tech-*"], priority=2)
-        bot3 = BotInstanceConfig(name="bot3", config_file="bot3.yaml", channels=["general"], priority=3)
+        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token_1", channels=["general"], priority=1)
+        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token_2", channels=["tech-*"], priority=2)
+        bot3 = BotInstanceConfig(name="bot3", config_file="bot3.yaml", discord_token="fake_token_3", channels=["general"], priority=3)
         
         config = MultiBotConfig(bots=[bot1, bot2, bot3])
         
@@ -229,7 +226,7 @@ class TestMultiBotConfig:
     def test_channel_matches_patterns_exact(self):
         """Test exact channel pattern matching."""
         # Create a minimal valid config to test the method
-        dummy_bot = BotInstanceConfig(name="test", config_file="test.yaml", channels=["test"])
+        dummy_bot = BotInstanceConfig(name="test", config_file="test.yaml", discord_token="fake_token_1", channels=["test"])
         config = MultiBotConfig(bots=[dummy_bot])
         
         assert config._channel_matches_patterns("general", ["general", "test"])
@@ -238,7 +235,7 @@ class TestMultiBotConfig:
     def test_channel_matches_patterns_wildcard(self):
         """Test wildcard channel pattern matching."""
         # Create a minimal valid config to test the method
-        dummy_bot = BotInstanceConfig(name="test", config_file="test.yaml", channels=["test"])
+        dummy_bot = BotInstanceConfig(name="test", config_file="test.yaml", discord_token="fake_token_1", channels=["test"])
         config = MultiBotConfig(bots=[dummy_bot])
         
         assert config._channel_matches_patterns("tech-support", ["tech-*"])
@@ -248,7 +245,7 @@ class TestMultiBotConfig:
     def test_channel_matches_patterns_prefix(self):
         """Test prefix channel pattern matching."""
         # Create a minimal valid config to test the method
-        dummy_bot = BotInstanceConfig(name="test", config_file="test.yaml", channels=["test"])
+        dummy_bot = BotInstanceConfig(name="test", config_file="test.yaml", discord_token="fake_token_1", channels=["test"])
         config = MultiBotConfig(bots=[dummy_bot])
         
         assert config._channel_matches_patterns("tech-support", ["tech-"])
@@ -283,6 +280,7 @@ class TestMultiBotConfigManager:
                     {
                         'name': 'test-bot',
                         'config_file': str(bot_config_file),
+                        'discord_token': 'fake_token',
                         'channels': ['test-channel']
                     }
                 ],
@@ -382,8 +380,8 @@ class TestMultiBotConfigManager:
     
     def test_validate_channel_assignments_no_conflicts(self):
         """Test channel assignment validation without conflicts."""
-        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", channels=["general"])
-        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", channels=["tech"])
+        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token_1", channels=["general"])
+        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token_2", channels=["tech"])
         
         config = MultiBotConfig(bots=[bot1, bot2])
         manager = MultiBotConfigManager()
@@ -393,8 +391,8 @@ class TestMultiBotConfigManager:
     
     def test_validate_channel_assignments_with_conflicts(self):
         """Test channel assignment validation with conflicts."""
-        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", channels=["general"])
-        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", channels=["general"])
+        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token_1", channels=["general"])
+        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token_2", channels=["general"])
         
         config = MultiBotConfig(bots=[bot1, bot2])
         manager = MultiBotConfigManager()
@@ -405,8 +403,8 @@ class TestMultiBotConfigManager:
     
     def test_get_config_summary(self):
         """Test getting configuration summary."""
-        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", channels=["general"], enabled=True)
-        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", channels=["tech"], enabled=False)
+        bot1 = BotInstanceConfig(name="bot1", config_file="bot1.yaml", discord_token="fake_token_1", channels=["general"], enabled=True)
+        bot2 = BotInstanceConfig(name="bot2", config_file="bot2.yaml", discord_token="fake_token_2", channels=["tech"], enabled=False)
         
         config = MultiBotConfig(bots=[bot1, bot2])
         manager = MultiBotConfigManager()
