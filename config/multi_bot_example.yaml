@@ -1,0 +1,175 @@
+# Multi-Bot Configuration Example
+# This file demonstrates a complete multi-bot setup with all available options
+
+# Bot configurations - Each bot represents a different AI personality
+bots:
+  # Sage: Philosophical discussions and wisdom
+  - name: "sage"
+    config_file: "sage.yaml"  # Individual bot configuration
+    discord_token: "${DISCORD_TOKEN_SAGE}"  # Unique Discord token
+    channels: 
+      - "philosophy"      # Exact channel match
+      - "advice-*"        # Wildcard pattern (advice-general, advice-career, etc.)
+      - "wisdom"
+      - "general"         # Can share channels with other bots
+    persona:
+      name: "Sage"
+      description: "A wise mentor who helps others think deeply"
+      personality_traits:
+        - "thoughtful"
+        - "philosophical" 
+        - "patient"
+        - "reflective"
+      response_style: "contemplative"
+      preferred_topics:
+        - "philosophy"
+        - "personal-growth"
+        - "life-advice"
+        - "ethics"
+        - "wisdom"
+      engagement_triggers:
+        - "complex-questions"
+        - "moral-dilemmas"
+        - "life-decisions"
+        - "philosophical-discussions"
+    response_behavior:
+      engagement_threshold: 0.3  # Lower = more responsive
+      response_probability: 0.4   # Chance to respond in shared channels
+      context_weight: 0.8         # How much to consider conversation history
+      max_response_length: 800
+    enabled: true
+    priority: 1  # Higher priority in shared channels
+
+  # Spark: Creative ideation and innovation
+  - name: "spark"
+    config_file: "spark.yaml"
+    discord_token: "${DISCORD_TOKEN_SPARK}"
+    channels:
+      - "creative"
+      - "projects-*"      # projects-web, projects-mobile, etc.
+      - "brainstorm*"     # brainstorm, brainstorming, team-brainstorm
+      - "innovation"
+      - "ideas"
+      - "general"         # Shared with other bots
+    persona:
+      name: "Spark"
+      description: "A creative catalyst who generates innovative ideas"
+      personality_traits:
+        - "energetic"
+        - "imaginative"
+        - "enthusiastic"
+        - "innovative"
+      response_style: "dynamic"
+      preferred_topics:
+        - "creativity"
+        - "innovation"
+        - "brainstorming"
+        - "design"
+        - "art"
+      engagement_triggers:
+        - "creative-challenges"
+        - "ideation"
+        - "inspiration-needed"
+        - "innovation-requests"
+    response_behavior:
+      engagement_threshold: 0.4
+      response_probability: 0.5
+      context_weight: 0.6
+      max_response_length: 600
+    enabled: true
+    priority: 2
+
+  # Logic: Technical analysis and research
+  - name: "logic"
+    config_file: "logic.yaml"
+    discord_token: "${DISCORD_TOKEN_LOGIC}"
+    channels:
+      - "tech-*"          # tech-support, tech-discussion, tech-help
+      - "research"
+      - "analysis"
+      - "data-*"          # data-science, data-analysis
+      - "science"
+      - "general"         # Shared with other bots
+    persona:
+      name: "Logic"
+      description: "An analytical thinker focused on facts and systematic reasoning"
+      personality_traits:
+        - "precise"
+        - "methodical"
+        - "analytical"
+        - "objective"
+      response_style: "structured"
+      preferred_topics:
+        - "technology"
+        - "research"
+        - "data-analysis"
+        - "science"
+        - "logic"
+      engagement_triggers:
+        - "technical-questions"
+        - "data-requests"
+        - "analysis-needed"
+        - "fact-checking"
+    response_behavior:
+      engagement_threshold: 0.2
+      response_probability: 0.3
+      context_weight: 0.9
+      max_response_length: 1000
+    enabled: true
+    priority: 3
+
+# Global settings for multi-bot coordination and shared resources
+global_settings:
+  # Message context settings
+  context_depth: 10                 # Number of previous messages to consider
+  conversation_timeout: 3600        # 1 hour in seconds - when to start new conversation
+  
+  # Response coordination to prevent conflicts
+  response_delay: "1-3"             # Random delay range in seconds before responding
+  max_concurrent_responses: 2       # Maximum bots that can respond simultaneously
+  cooldown_period: 30               # Seconds between bot responses in same channel
+  
+  # Storage settings - Choose file or SQLite
+  storage_type: "sqlite"            # "file" or "sqlite"
+  storage_path: "./data/conversations.db"  # For SQLite: database file path
+  # storage_path: "./data/multi_bot_conversations"  # For file storage: directory path
+  session_timeout: 3600             # SQLite session timeout in seconds
+  
+  # Bot interaction settings
+  enable_cross_bot_context: true    # Bots can see each other's messages
+  enable_bot_mentions: true         # Bots can mention and respond to each other
+  
+  # Response behavior controls
+  prevent_response_loops: true      # Prevent bots from responding to each other infinitely
+  max_bot_chain_length: 3          # Maximum consecutive bot responses allowed
+  
+  # Performance settings
+  max_history_size: 1000           # Maximum messages to keep in memory per conversation
+  cache_cleanup_interval: 300      # Clean up old cache entries every 5 minutes (seconds)
+  
+  # Debugging and monitoring
+  debug_mode: false                # Enable detailed debug logging
+  log_response_decisions: true     # Log why bots decide to respond or not
+  track_engagement_metrics: true   # Track engagement statistics for optimization
+
+# Logging configuration for the entire multi-bot system
+logging:
+  level: "INFO"                    # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - [%(name)s] %(levelname)s - %(message)s"
+  file: "./logs/multi_bot.log"     # Optional: log to file
+  max_file_size: "10MB"           # Rotate log files at this size
+  backup_count: 5                 # Keep this many backup log files
+
+# Environment variables that should be defined in .env file:
+# DISCORD_TOKEN_SAGE=your_sage_bot_token_here
+# DISCORD_TOKEN_SPARK=your_spark_bot_token_here  
+# DISCORD_TOKEN_LOGIC=your_logic_bot_token_here
+# OLLAMA_BASE_URL=http://127.0.0.1:11434
+# OLLAMA_MODEL=llama3
+
+# Usage:
+# 1. Copy this file: cp config/multi_bot_example.yaml config/multi_bot.yaml
+# 2. Set up your Discord tokens in .env file
+# 3. Adjust channel names to match your Discord server
+# 4. Customize bot personalities by editing individual config files
+# 5. Run: python main.py

@@ -1,12 +1,14 @@
-# Example configuration file for Ollama Discord Bot
-# Copy this file and customize for your bot instance
+# Example configuration file for Individual Bot in Multi-Bot System
+# This file defines settings for a single bot personality
+# The multi-bot system uses config/multi_bot.yaml as the main configuration
 
 bot:
   name: "example-bot"
-  description: "Example bot configuration"
+  description: "Example bot configuration for multi-bot system"
   
 discord:
-  token: "${DISCORD_TOKEN}"
+  # NOTE: Token is override by multi_bot.yaml - this is just a placeholder
+  token: "${DISCORD_TOKEN_EXAMPLE}"  
   command_prefix: "!ask"
   
 ollama:
@@ -14,16 +16,18 @@ ollama:
   model: "llama3"
   timeout: 60
   
-# System prompt to customize bot behavior
+# System prompt to customize bot behavior and personality
 system_prompt: |
   You are a helpful AI assistant. Be concise and friendly in your responses.
+  Adapt your personality based on the context and channels you're active in.
   
 # Storage configuration for conversation history
+# NOTE: Storage type is configured globally in multi_bot.yaml
 storage:
   enabled: true
-  type: "file"  # Currently only 'file' supported
-  path: "./data/{bot_name}"
-  max_history: 50
+  type: "file"  # Overridden by global_settings.storage_type in multi_bot.yaml
+  path: "./data/{bot_name}"  # Bot-specific path within global storage
+  max_history: 50  # Maximum messages to keep in memory per conversation
   
 # Message handling
 message:
