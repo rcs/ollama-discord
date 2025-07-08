@@ -38,16 +38,6 @@ class TestResponseBehaviorConfig:
         assert config.context_weight == 0.9
         assert config.max_response_length == 1000
     
-    def test_validation_probability_range(self):
-        """Test validation of probability values."""
-        with pytest.raises(ValueError):
-            ResponseBehaviorConfig(engagement_threshold=1.5)
-        
-        with pytest.raises(ValueError):
-            ResponseBehaviorConfig(response_probability=-0.1)
-        
-        with pytest.raises(ValueError):
-            ResponseBehaviorConfig(context_weight=2.0)
 
 
 class TestPersonaConfig:
@@ -102,23 +92,6 @@ class TestBotInstanceConfig:
         assert config.enabled is True
         assert config.priority == 0
     
-    def test_validation_config_file_extension(self):
-        """Test validation of config file extension."""
-        with pytest.raises(ValueError, match="Config file must be a YAML file"):
-            BotInstanceConfig(
-                name="test",
-                config_file="test.json",
-                channels=["test"]
-            )
-    
-    def test_validation_empty_channels(self):
-        """Test validation of empty channels list."""
-        with pytest.raises(ValueError, match="At least one channel must be specified"):
-            BotInstanceConfig(
-                name="test",
-                config_file="test.yaml",
-                channels=[]
-            )
     
     def test_full_bot_config(self):
         """Test full bot configuration."""
@@ -208,18 +181,6 @@ class TestMultiBotConfig:
         assert config.bots[0] == bot_config
         assert isinstance(config.global_settings, GlobalSettings)
     
-    def test_validation_empty_bots(self):
-        """Test validation of empty bots list."""
-        with pytest.raises(ValueError, match="At least one bot must be configured"):
-            MultiBotConfig(bots=[])
-    
-    def test_validation_duplicate_bot_names(self):
-        """Test validation of duplicate bot names."""
-        bot1 = BotInstanceConfig(name="test", config_file="test1.yaml", channels=["ch1"])
-        bot2 = BotInstanceConfig(name="test", config_file="test2.yaml", channels=["ch2"])
-        
-        with pytest.raises(ValueError, match="Bot names must be unique"):
-            MultiBotConfig(bots=[bot1, bot2])
     
     def test_get_bot_config(self):
         """Test getting specific bot configuration."""

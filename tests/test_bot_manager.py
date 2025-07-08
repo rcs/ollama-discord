@@ -4,6 +4,7 @@ import pytest
 import asyncio
 import tempfile
 import json
+import yaml
 from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
@@ -127,6 +128,135 @@ class TestMultiBotConfig:
         config = MultiBotConfig(bots=[bot_config])  # global_settings gets default
         assert len(config.bots) == 1
         assert config.global_settings.context_depth == 10  # default value
+
+
+class TestBotManagerValidation:
+    """Test BotManager validation error scenarios."""
+    
+    @pytest.fixture
+    def temp_config_dir_empty_bots(self, tmp_path):
+        """Create temporary config directory with empty bots configuration."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        
+        # Create multi_bot.yaml with empty bots list
+        multi_config = {
+            'global_settings': {'context_depth': 5},
+            'bots': []  # Empty bots list
+        }
+        multi_config_file = config_dir / "multi_bot.yaml"
+        multi_config_file.write_text(yaml.dump(multi_config))
+        
+        return config_dir, multi_config_file
+    
+    @pytest.fixture
+    def temp_config_dir_invalid_bot(self, tmp_path):
+        """Create temporary config directory with invalid bot configuration."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        
+        # Create a dummy config file first
+        test_config = {
+            'bot': {'name': 'test'},
+            'discord': {'token': 'test_token'},
+            'ollama': {'model': 'llama3'},
+            'storage': {'path': './data'},
+            'message': {'max_length': 2000},
+            'rate_limit': {'enabled': False},
+            'logging': {'level': 'INFO'}
+        }
+        test_config_file = config_dir / "test.yaml"
+        test_config_file.write_text(yaml.dump(test_config))
+        
+        # Create multi_bot.yaml with bot missing required fields
+        multi_config = {
+            'global_settings': {'context_depth': 5},
+            'bots': [
+                {
+                    'name': '',  # Empty name
+                    'config_file': 'test.yaml',
+                    'channels': ['test']
+                }
+            ]
+        }
+        multi_config_file = config_dir / "multi_bot.yaml"
+        multi_config_file.write_text(yaml.dump(multi_config))
+        
+        return config_dir, multi_config_file
+    
+    @pytest.fixture
+    def temp_config_dir_missing_channels(self, tmp_path):
+        """Create temporary config directory with bot missing channels."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        
+        # Create multi_bot.yaml with bot missing channels
+        multi_config = {
+            'global_settings': {'context_depth': 5},
+            'bots': [
+                {
+                    'name': 'test-bot',
+                    'config_file': 'test.yaml',
+                    'channels': []  # Empty channels
+                }
+            ]
+        }
+        multi_config_file = config_dir / "multi_bot.yaml"
+        multi_config_file.write_text(yaml.dump(multi_config))
+        
+        return config_dir, multi_config_file
+    
+    @pytest.mark.asyncio
+    async def test_empty_bots_list_validation_error(self, temp_config_dir_empty_bots):
+        """Test that empty bots list raises validation error."""
+        config_dir, multi_config_file = temp_config_dir_empty_bots
+        manager = BotManager(str(multi_config_file))
+        
+        with pytest.raises(Exception, match="At least one bot must be configured"):
+            await manager.initialize()
+    
+    @pytest.mark.asyncio
+    async def test_invalid_bot_name_validation_error(self, temp_config_dir_invalid_bot):
+        """Test that empty bot name raises validation error."""
+        config_dir, multi_config_file = temp_config_dir_invalid_bot
+        manager = BotManager(str(multi_config_file))
+        
+        with pytest.raises(ValueError, match="Bot configuration 0 missing required field: name"):
+            await manager.initialize()
+    
+    @pytest.mark.asyncio
+    async def test_missing_channels_validation_error(self, temp_config_dir_missing_channels):
+        """Test that empty channels list raises validation error."""
+        config_dir, multi_config_file = temp_config_dir_missing_channels
+        manager = BotManager(str(multi_config_file))
+        
+        with pytest.raises(Exception, match="At least one channel must be specified"):
+            await manager.initialize()
+    
+    @pytest.mark.asyncio
+    async def test_missing_config_file_validation_error(self, tmp_path):
+        """Test that missing config_file raises validation error."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        
+        # Create multi_bot.yaml with bot missing config_file
+        multi_config = {
+            'global_settings': {'context_depth': 5},
+            'bots': [
+                {
+                    'name': 'test-bot',
+                    'config_file': '',  # Empty config_file
+                    'channels': ['test']
+                }
+            ]
+        }
+        multi_config_file = config_dir / "multi_bot.yaml"
+        multi_config_file.write_text(yaml.dump(multi_config))
+        
+        manager = BotManager(str(multi_config_file))
+        
+        with pytest.raises(Exception, match="Config file must be a YAML file"):
+            await manager.initialize()
 
 
 class TestBotManager:

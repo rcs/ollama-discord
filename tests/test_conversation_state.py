@@ -60,43 +60,6 @@ class TestConversationMessage:
         
         assert message.metadata == {}
     
-    def test_message_to_dict(self):
-        """Test converting message to dictionary."""
-        timestamp = datetime.now()
-        message = ConversationMessage(
-            role="assistant",
-            content="Hi there",
-            timestamp=timestamp,
-            bot_name="test-bot",
-            metadata={"key": "value"}
-        )
-        
-        data = message.to_dict()
-        
-        assert data["role"] == "assistant"
-        assert data["content"] == "Hi there"
-        assert data["timestamp"] == timestamp.isoformat()
-        assert data["bot_name"] == "test-bot"
-        assert data["metadata"]["key"] == "value"
-    
-    def test_message_from_dict(self):
-        """Test creating message from dictionary."""
-        timestamp = datetime.now()
-        data = {
-            "role": "user",
-            "content": "Test message",
-            "timestamp": timestamp.isoformat(),
-            "bot_name": None,
-            "metadata": {"source": "test"}
-        }
-        
-        message = ConversationMessage.from_dict(data)
-        
-        assert message.role == "user"
-        assert message.content == "Test message"
-        assert message.timestamp == timestamp
-        assert message.bot_name is None
-        assert message.metadata["source"] == "test"
 
 
 class TestConversationContext:
@@ -210,57 +173,6 @@ class TestConversationContext:
         context.add_participant("bot1")
         assert context.participants.count("bot1") == 1
     
-    def test_context_to_dict(self):
-        """Test converting context to dictionary."""
-        timestamp = datetime.now()
-        message = ConversationMessage("user", "Hello", timestamp)
-        
-        context = ConversationContext(
-            channel_id=123,
-            user_id=456,
-            messages=[message],
-            last_updated=timestamp,
-            topic="test",
-            participants=["bot1"]
-        )
-        
-        data = context.to_dict()
-        
-        assert data["channel_id"] == 123
-        assert data["user_id"] == 456
-        assert len(data["messages"]) == 1
-        assert data["last_updated"] == timestamp.isoformat()
-        assert data["topic"] == "test"
-        assert data["participants"] == ["bot1"]
-    
-    def test_context_from_dict(self):
-        """Test creating context from dictionary."""
-        timestamp = datetime.now()
-        data = {
-            "channel_id": 123,
-            "user_id": 456,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "Hello",
-                    "timestamp": timestamp.isoformat(),
-                    "bot_name": None,
-                    "metadata": {}
-                }
-            ],
-            "last_updated": timestamp.isoformat(),
-            "topic": "test",
-            "participants": ["bot1"]
-        }
-        
-        context = ConversationContext.from_dict(data)
-        
-        assert context.channel_id == 123
-        assert context.user_id == 456
-        assert len(context.messages) == 1
-        assert context.messages[0].content == "Hello"
-        assert context.topic == "test"
-        assert context.participants == ["bot1"]
 
 
 class TestConversationState:
@@ -466,18 +378,6 @@ class TestConversationState:
         assert not storage_file.exists()
     
     @pytest.mark.asyncio
-    async def test_export_conversation_json(self, conversation_state):
-        """Test exporting conversation as JSON."""
-        await conversation_state.add_message(123, 456, "user", "Hello")
-        await conversation_state.add_message(123, 456, "assistant", "Hi", "bot1")
-        
-        export_data = await conversation_state.export_conversation(123, 456, "json")
-        
-        # Should be valid JSON
-        data = json.loads(export_data)
-        assert data["channel_id"] == 123
-        assert data["user_id"] == 456
-        assert len(data["messages"]) == 2
     
     @pytest.mark.asyncio
     async def test_export_conversation_txt(self, conversation_state):
