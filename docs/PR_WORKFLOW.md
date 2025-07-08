@@ -3,6 +3,44 @@
 ## Overview
 This repository uses a PR-based development workflow with automated CI/CD checks and required approvals.
 
+## Opencode Workflow Requirements
+
+### IMPORTANT: Branch and PR Creation
+1. **Always create a branch** at the beginning of ANY work (features, fixes, documentation)
+2. **Always create a PR** at the end of ANY work for review
+3. **Never commit directly to main/master branch**
+
+### Standard Workflow for Opencode
+```bash
+# 1. Start work - ALWAYS create a branch first
+git checkout -b <type>/<description>
+# Examples:
+# - feature/add-user-auth
+# - fix/service-startup-issues  
+# - docs/update-readme
+# - refactor/cleanup-imports
+
+# 2. Do the work
+# ... make changes, test, validate ...
+
+# 3. Commit changes
+git add -A
+git commit -m "Clear description
+
+- Detail specific changes
+- Reference issues if applicable
+
+🤖 Generated with [opencode](https://opencode.ai)
+
+Co-Authored-By: opencode <noreply@opencode.ai>"
+
+# 4. Push branch
+git push -u origin <branch-name>
+
+# 5. Create PR - ALWAYS do this at the end
+gh pr create --title "Brief description" --body "Details..."
+```
+
 ## Branch Protection Rules Setup
 
 To set up branch protection rules (do this once):
