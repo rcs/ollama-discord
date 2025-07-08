@@ -52,13 +52,49 @@ Discord bot system with Ollama integration that supports multiple bot configurat
    python main.py
    ```
 
+## Virtual Environment Usage
+
+⚠️ **IMPORTANT**: This project uses a virtual environment located in the `bin/` directory. Always use the virtual environment Python interpreter for all operations:
+
+### Python Commands
+- **Use**: `bin/python` (virtual environment Python)
+- **NOT**: `python` or `python3` (system Python, will fail)
+
+### Common Commands
+```bash
+# Run tests
+bin/python -m pytest tests/ -v
+
+# Run specific test file
+bin/python -m pytest tests/test_integration.py -v
+
+# Run tests with coverage
+bin/python -m pytest tests/ --cov=src --cov-report=html
+
+# Run the bot
+bin/python main.py
+
+# Install packages
+bin/pip install package_name
+
+# Check Python version
+bin/python --version
+```
+
+### Why This Matters
+- System `python`/`python3` lacks required dependencies (pytest, discord.py, etc.)
+- Virtual environment `bin/python` has all project dependencies installed
+- Using wrong Python interpreter causes "module not found" errors
+
 ## Development Commands
 
-- **Validate configuration**: `python main.py --validate-config -c config/multi_bot.yaml`
-- **Install in development mode**: `pip install -e .`
-- **Run multi-bot system**: `python main.py -c config/multi_bot.yaml`
-- **Install dev dependencies**: `pip install -e ".[dev]"`
-- **Run tests**: `source bin/activate && python -m pytest tests/`
+- **Validate configuration**: `bin/python main.py --validate-config -c config/multi_bot.yaml`
+- **Install in development mode**: `bin/pip install -e .`
+- **Run multi-bot system**: `bin/python main.py -c config/multi_bot.yaml`
+- **Install dev dependencies**: `bin/pip install -e ".[dev]"`
+- **Run tests**: `bin/python -m pytest tests/`
+- **Run tests with coverage**: `bin/python -m pytest tests/ --cov=src`
+- **Run specific test file**: `bin/python -m pytest tests/test_integration.py -v`
 
 ## Configuration Structure
 
@@ -248,6 +284,23 @@ ollama-discord/
 ```
 
 ## Development Guidelines
+
+### Virtual Environment Commands
+⚠️ **Always use the virtual environment Python**:
+
+- `bin/python -m pytest tests/`
+- `bin/python main.py`
+- `bin/pip install package`
+
+### Git Operations
+You are authorized to run git commands including:
+- `git status` - Check repository status
+- `git diff` - View changes
+- `git add` - Stage files for commit
+- `git commit` - Create commits
+- `git log` - View commit history
+
+No need to ask permission for standard git operations.
 
 ### File Operations
 ⚠️ **IMPORTANT**: Always check file existence before writing to any file you haven't created in the current session:
