@@ -1,39 +1,70 @@
 import pytest
-from src.bot import DiscordBot, Config, format_message_for_discord
+from unittest.mock import Mock, AsyncMock
+from src.bot import DiscordBot, format_message_for_discord
+from src.config import Config, BotConfig, DiscordConfig, OllamaConfig, StorageConfig, MessageConfig, RateLimitConfig, LoggingConfig
+from src.domain_services import BotOrchestrator
 
 
-class TestBot:
-    """Test cases for the Bot class."""
+class TestDiscordBot:
+    """Test cases for the DiscordBot class."""
     
-    def test_bot_initialization(self):
-        """Test that bot can be initialized with config."""
-        config = Config()
-        bot = DiscordBot(config)
-        assert bot is not None
-        assert bot.config == config
+    def create_test_config(self):
+        """Helper to create a test config."""
+        return Config(
+            bot=BotConfig(name="test-bot"),
+            discord=DiscordConfig(token="test-token"),
+            ollama=OllamaConfig(),
+            storage=StorageConfig(path="./test_data"),
+            message=MessageConfig(),
+            rate_limit=RateLimitConfig(),
+            logging=LoggingConfig()
+        )
     
-    def test_bot_config_validation(self):
-        """Test that bot validates config properly."""
-        config = Config()
-        # This should not raise an exception
-        bot = DiscordBot(config)
-        assert bot is not None
+    
+    
+    
+    @pytest.mark.asyncio
+    async def test_on_message_with_orchestrator(self):
+        """Test message handling with orchestrator."""
+        config = self.create_test_config()
+        mock_orchestrator = AsyncMock(spec=BotOrchestrator)
+        mock_orchestrator.process_message.return_value = True
+        
+        bot = DiscordBot(config, orchestrator=mock_orchestrator, channel_patterns=["general"])
+        
+        # Mock Discord message
+        mock_message = Mock()
+        mock_message.content = "Hello bot"
+        
+        # Call on_message
+        await bot.on_message(mock_message)
+        
+        # Verify orchestrator was called
+        mock_orchestrator.process_message.assert_called_once_with(
+            "test-bot", mock_message, ["general"]
+        )
+    
+    @pytest.mark.asyncio
+    async def test_on_message_direct_orchestrator_call(self):
+        """Test message handling goes directly to orchestrator."""
+        config = self.create_test_config()
+        mock_orchestrator = AsyncMock(spec=BotOrchestrator)
+        
+        bot = DiscordBot(config, orchestrator=mock_orchestrator, channel_patterns=["general"])
+        
+        # Mock Discord message
+        mock_message = Mock()
+        mock_message.content = "Hello bot"
+        
+        # Call on_message
+        await bot.on_message(mock_message)
+        
+        # Verify orchestrator was called directly
+        mock_orchestrator.process_message.assert_called_once_with(
+            "test-bot", mock_message, ["general"]
+        )
 
 
-class TestConfig:
-    """Test cases for the Config class."""
-    
-    def test_config_creation(self):
-        """Test that config can be created."""
-        config = Config()
-        assert config is not None
-    
-    def test_config_defaults(self):
-        """Test that config has expected default values."""
-        config = Config()
-        # Add assertions for expected default values
-        assert hasattr(config, 'discord_token')
-        assert hasattr(config, 'ollama_url')
 
 
 class TestMessageFormatting:
@@ -85,4 +116,4 @@ This is the end."""
         """Test formatting of empty message."""
         chunks = format_message_for_discord("", max_length=100)
         assert len(chunks) == 1
-        assert chunks[0] == "" 
+        assert chunks[0] == ""

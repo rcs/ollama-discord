@@ -8,17 +8,22 @@ Discord bot system with Ollama integration that supports multiple bot configurat
 
 ## Architecture
 
-- **Modular design**: Code organized in `src/` package with separate concerns
+- **Ports & Adapters (Hexagonal)**: Clean architecture with domain services and adapters
+- **Multi-bot only**: Simplified architecture supports only multi-bot configuration
 - **Configuration-driven**: YAML-based configuration with Pydantic validation
-- **Multiple bot support**: Each bot runs with its own configuration
-- **Conversation storage**: Optional persistent conversation history per user/channel
-- **Rate limiting**: Configurable request rate limiting per user
+- **Domain-driven design**: Business logic separated from infrastructure concerns
+- **Conversation storage**: Persistent conversation history per user/channel
+- **Bot coordination**: Intelligent coordination prevents simultaneous responses
 
 ## Key Components
 
-- `src/bot.py`: Main `DiscordBot` class with conversation storage and rate limiting
-- `src/config.py`: Configuration management with Pydantic models and validation
-- `main.py`: CLI entry point for running bots with config selection
+- `src/bot.py`: Simplified `DiscordBot` class focused on Discord integration
+- `src/domain_services.py`: Core business logic (coordination, response generation)
+- `src/adapters.py`: Infrastructure adapters (storage, AI, notifications)
+- `src/ports.py`: Interface definitions for dependency injection
+- `src/service_factory.py`: Dependency injection container
+- `src/bot_manager.py`: Multi-bot orchestration and lifecycle management
+- `main.py`: CLI entry point for multi-bot systems only
 - `config/`: Directory containing YAML configuration files
 
 ## Development Setup
@@ -36,26 +41,67 @@ Discord bot system with Ollama integration that supports multiple bot configurat
 3. **Create configuration**:
    ```bash
    cp config/example.yaml config/mybot.yaml
-   # Edit config/mybot.yaml with your settings
+   # Edit config/mybot.yaml with your individual bot settings
+   # Edit config/multi_bot.yaml to configure multiple bots
    ```
 
-4. **Run a bot**:
+4. **Run the multi-bot system**:
    ```bash
-   python main.py --config config/mybot.yaml
+   python main.py --config config/multi_bot.yaml
    # Or auto-select if only one config exists:
    python main.py
    ```
 
+## Virtual Environment Usage
+
+⚠️ **IMPORTANT**: This project uses a virtual environment located in the `bin/` directory. Always use the virtual environment Python interpreter for all operations:
+
+### Python Commands
+- **Use**: `bin/python` (virtual environment Python)
+- **NOT**: `python` or `python3` (system Python, will fail)
+
+### Common Commands
+```bash
+# Run tests
+bin/python -m pytest tests/ -v
+
+# Run specific test file
+bin/python -m pytest tests/test_integration.py -v
+
+# Run tests with coverage
+bin/python -m pytest tests/ --cov=src --cov-report=html
+
+# Run the bot
+bin/python main.py
+
+# Install packages
+bin/pip install package_name
+
+# Check Python version
+bin/python --version
+```
+
+### Why This Matters
+- System `python`/`python3` lacks required dependencies (pytest, discord.py, etc.)
+- Virtual environment `bin/python` has all project dependencies installed
+- Using wrong Python interpreter causes "module not found" errors
+
 ## Development Commands
 
-- **List available configs**: `python main.py --list-configs`
-- **Install in development mode**: `pip install -e .`
-- **Run specific bot**: `python main.py -c config/bot1.yaml`
-- **Install dev dependencies**: `pip install -e ".[dev]"`
+- **Validate configuration**: `bin/python main.py --validate-config -c config/multi_bot.yaml`
+- **Install in development mode**: `bin/pip install -e .`
+- **Run multi-bot system**: `bin/python main.py -c config/multi_bot.yaml`
+- **Install dev dependencies**: `bin/pip install -e ".[dev]"`
+- **Run tests**: `bin/python -m pytest tests/`
+- **Run tests with coverage**: `bin/python -m pytest tests/ --cov=src`
+- **Run specific test file**: `bin/python -m pytest tests/test_integration.py -v`
 
 ## Configuration Structure
 
-Each bot configuration (`config/*.yaml`) includes:
+The system uses two types of configuration files:
+
+### Individual Bot Configuration (`config/*.yaml`)
+Each bot has its own configuration file with:
 
 - **bot**: Name and description
 - **discord**: Token and command prefix  
@@ -65,6 +111,13 @@ Each bot configuration (`config/*.yaml`) includes:
 - **message**: Message handling (max length, typing indicator)
 - **rate_limit**: Request rate limiting configuration
 - **logging**: Logging level and format
+
+### Multi-Bot Configuration (`config/multi_bot.yaml`)
+The main configuration file that orchestrates multiple bots:
+
+- **global_settings**: Shared settings for coordination and rate limiting
+- **bots**: List of bot instances, each referencing an individual bot config
+- **coordination**: Settings for preventing response conflicts between bots
 
 Environment variables can be used in configs with `${VAR_NAME}` syntax.
 
@@ -215,8 +268,15 @@ ollama-discord/
 ├── bin/                     # Virtual environment executables (gitignored)
 ├── src/
 │   ├── __init__.py
-│   ├── bot.py               # DiscordBot class with full functionality
-│   └── config.py            # Configuration models and loading
+│   ├── bot.py               # Simplified DiscordBot class (Discord integration only)
+│   ├── bot_manager.py       # Multi-bot orchestration and lifecycle management
+│   ├── config.py            # Configuration models and loading
+│   ├── multi_bot_config.py  # Multi-bot configuration management
+│   ├── domain_services.py   # Core business logic (coordination, response generation)
+│   ├── adapters.py          # Infrastructure adapters (storage, AI, notifications)
+│   ├── ports.py             # Interface definitions for dependency injection
+│   ├── service_factory.py   # Dependency injection container
+│   └── conversation_state.py # Conversation state management
 ├── config/
 │   ├── example.yaml         # Template configuration
 │   └── *.yaml              # Individual bot configurations
@@ -224,6 +284,23 @@ ollama-discord/
 ```
 
 ## Development Guidelines
+
+### Virtual Environment Commands
+⚠️ **Always use the virtual environment Python**:
+
+- `bin/python -m pytest tests/`
+- `bin/python main.py`
+- `bin/pip install package`
+
+### Git Operations
+You are authorized to run git commands including:
+- `git status` - Check repository status
+- `git diff` - View changes
+- `git add` - Stage files for commit
+- `git commit` - Create commits
+- `git log` - View commit history
+
+No need to ask permission for standard git operations.
 
 ### File Operations
 ⚠️ **IMPORTANT**: Always check file existence before writing to any file you haven't created in the current session:

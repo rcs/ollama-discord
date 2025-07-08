@@ -1,4 +1,4 @@
-"""Main entry point for Ollama Discord Bot."""
+"""Main entry point for Ollama Discord Bot - Multi-bot mode only."""
 
 import sys
 import asyncio
@@ -7,76 +7,76 @@ from typing import Optional
 
 import click
 
-from src.config import load_config
-from src.bot import DiscordBot
+from src.bot_manager import BotManager
+from src.multi_bot_config import multi_bot_config_manager
 
 
 @click.command()
 @click.option(
     '--config', '-c',
     type=click.Path(exists=True, path_type=Path),
-    help='Path to configuration file'
+    help='Path to multi-bot configuration file (defaults to config/multi_bot.yaml)'
 )
 @click.option(
-    '--list-configs', '-l',
+    '--validate-config', '-v',
     is_flag=True,
-    help='List available configuration files'
+    help='Validate configuration without starting bots'
 )
-def main(config: Optional[Path], list_configs: bool):
-    """Ollama Discord Bot - Run Discord bots with Ollama integration."""
+@click.option(
+    '--create-example',
+    type=click.Path(path_type=Path),
+    help='Create example multi-bot configuration file'
+)
+def main(config: Optional[Path], validate_config: bool, create_example: Optional[Path]):
+    """Ollama Discord Bot - Multi-bot system with Ollama integration."""
     
     config_dir = Path("config")
     
-    if list_configs:
-        """List available configuration files."""
-        if not config_dir.exists():
-            click.echo("No config directory found.")
+    # Handle create example command
+    if create_example:
+        try:
+            multi_bot_config_manager.create_example_config(str(create_example))
+            click.echo(f"Created example multi-bot configuration: {create_example}")
             return
-        
-        config_files = list(config_dir.glob("*.yaml"))
-        if not config_files:
-            click.echo("No configuration files found in config/")
-            return
-        
-        click.echo("Available configuration files:")
-        for config_file in sorted(config_files):
-            if config_file.name != "example.yaml":
-                click.echo(f"  {config_file.name}")
-        return
+        except Exception as e:
+            click.echo(f"Failed to create example configuration: {e}")
+            sys.exit(1)
     
+    # Determine configuration file
     if not config:
-        # Try to find a configuration file
-        config_files = list(config_dir.glob("*.yaml"))
-        config_files = [f for f in config_files if f.name != "example.yaml"]
-        
-        if not config_files:
-            click.echo("No configuration files found. Use --list-configs to see available configs.")
-            click.echo("Copy config/example.yaml to create your own configuration.")
-            sys.exit(1)
-        
-        if len(config_files) == 1:
-            config = config_files[0]
-            click.echo(f"Using configuration: {config.name}")
-        else:
-            click.echo("Multiple configuration files found. Please specify one with --config:")
-            for config_file in sorted(config_files):
-                click.echo(f"  {config_file.name}")
+        config = config_dir / "multi_bot.yaml"
+        if not config.exists():
+            click.echo("Multi-bot configuration not found: config/multi_bot.yaml")
+            click.echo("Use --create-example config/multi_bot.yaml to create an example configuration.")
             sys.exit(1)
     
+    # Validate configuration if requested
+    if validate_config:
+        try:
+            multi_config = multi_bot_config_manager.load_multi_bot_config(str(config))
+            summary = multi_bot_config_manager.get_config_summary(multi_config)
+            click.echo("✅ Multi-bot configuration is valid!")
+            click.echo(f"Total bots: {summary['total_bots']}")
+            click.echo(f"Enabled bots: {summary['enabled_bots']}")
+            click.echo(f"Bot names: {', '.join(summary['bot_names'])}")
+            if summary['potential_conflicts']:
+                click.echo("⚠️  Potential channel conflicts:")
+                for channel, bots in summary['potential_conflicts'].items():
+                    click.echo(f"  {channel}: {', '.join(bots)}")
+            return
+        except Exception as e:
+            click.echo(f"❌ Configuration validation failed: {e}")
+            sys.exit(1)
+    
+    # Run multi-bot system
     try:
-        # Load configuration
-        bot_config = load_config(str(config))
-        click.echo(f"Loaded configuration for bot: {bot_config.bot.name}")
-        
-        # Create and run bot
-        bot = DiscordBot(bot_config)
-        bot.run()
-        
-    except FileNotFoundError as e:
-        click.echo(f"Configuration file not found: {e}")
-        sys.exit(1)
+        click.echo(f"Starting multi-bot system with configuration: {config.name}")
+        manager = BotManager(str(config))
+        asyncio.run(manager.run())
+    except KeyboardInterrupt:
+        click.echo("\nShutting down multi-bot system...")
     except Exception as e:
-        click.echo(f"Failed to start bot: {e}")
+        click.echo(f"Failed to start multi-bot system: {e}")
         sys.exit(1)
 
 

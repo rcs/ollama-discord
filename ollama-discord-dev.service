@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/home/rcs/dev/ollama-discord
-ExecStart=/bin/bash -c 'find src/ main.py config/ -name "*.py" -o -name "*.yaml" | entr -n -r /home/rcs/dev/ollama-discord/bin/python main.py --config config/bot1.yaml'
+ExecStart=/bin/bash -c 'find src/ main.py config/ -name "*.py" -o -name "*.yaml" | entr -n -r /home/rcs/dev/ollama-discord/bin/python main.py --multi-bot --config config/multi_bot.yaml'
 Restart=always
 RestartSec=2
 Environment=HOME=/home/rcs
