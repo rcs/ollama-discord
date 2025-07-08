@@ -89,19 +89,19 @@ To run the bot automatically when you log in, use the systemd user service:
 ### Installation
 ```bash
 # Install service (creates user service that starts on login)
-bin/install-service.sh install
+scripts/install-service.sh install
 
 # Check service status
-bin/install-service.sh status
+scripts/install-service.sh status
 
 # View logs
-bin/install-service.sh logs
+scripts/install-service.sh logs
 
 # Follow logs in real-time
-bin/install-service.sh follow
+scripts/install-service.sh follow
 
 # Uninstall service
-bin/install-service.sh uninstall
+scripts/install-service.sh uninstall
 ```
 
 ### Manual Service Management
@@ -123,7 +123,7 @@ journalctl --user -u ollama-discord.service -f
 ```
 
 ### Troubleshooting
-- **Service fails to start**: Check logs with `bin/install-service.sh logs`
+- **Service fails to start**: Check logs with `scripts/install-service.sh logs`
 - **Bot token issues**: Ensure `DISCORD_TOKEN_BOT1` environment variable is set
 - **Ollama connection**: Verify Ollama is running on port 11434
 - **Permission issues**: Service runs as your user, no sudo required
@@ -135,9 +135,10 @@ ollama-discord/
 ├── main.py                   # CLI entry point
 ├── pyproject.toml            # Dependencies and project metadata
 ├── ollama-discord.service    # Systemd user service file
-├── bin/
+├── scripts/
 │   ├── install-service.sh    # Service installation script
-│   └── python               # Virtual environment Python executable
+│   └── setup_branch_protection.py  # Existing script
+├── bin/                     # Virtual environment executables (gitignored)
 ├── src/
 │   ├── __init__.py
 │   ├── bot.py               # DiscordBot class with full functionality
