@@ -1,0 +1,31 @@
+# Test configuration for service validation
+# Uses DISCORD_TOKEN from .env file or environment
+bot:
+  name: "test-bot"
+  description: "Test bot for service validation"
+  
+discord:
+  token: "${DISCORD_TOKEN}"
+  command_prefix: "!test"
+  
+ollama:
+  base_url: "http://127.0.0.1:11434"
+  model: "llama3"
+  timeout: 60
+  
+system_prompt: |
+  Test bot for service validation. Modified to test auto-restart!
+  
+storage:
+  enabled: false
+  
+message:
+  max_length: 1900
+  typing_indicator: true
+  
+rate_limit:
+  enabled: false
+  
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

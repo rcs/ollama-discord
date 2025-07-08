@@ -14,6 +14,105 @@ import requests
 from .config import Config, setup_logging
 
 
+def format_message_for_discord(content: str, max_length: int = 2000) -> List[str]:
+    """
+    Format a message for Discord, handling code blocks and long messages.
+    
+    Args:
+        content: The message content to format
+        max_length: Maximum length per Discord message (default 2000)
+    
+    Returns:
+        List of formatted message chunks
+    """
+    if len(content) <= max_length:
+        return [content]
+    
+    # Check if content contains code blocks
+    if "```" in content:
+        return _split_code_block_message(content, max_length)
+    else:
+        return _split_regular_message(content, max_length)
+
+
+def _split_code_block_message(content: str, max_length: int) -> List[str]:
+    """Split a message containing code blocks."""
+    chunks = []
+    current_chunk = ""
+    in_code_block = False
+    code_block_lang = ""
+    
+    lines = content.split('\n')
+    
+    for line in lines:
+        # Check for code block markers
+        if line.strip().startswith('```'):
+            if not in_code_block:
+                # Starting a code block
+                code_block_lang = line.strip()[3:].strip()
+                test_chunk = current_chunk + f"\n```{code_block_lang}\n"
+                if len(test_chunk) > max_length:
+                    if current_chunk:
+                        chunks.append(current_chunk)
+                        current_chunk = f"```{code_block_lang}\n"
+                    else:
+                        current_chunk = test_chunk
+                else:
+                    current_chunk = test_chunk
+                in_code_block = True
+            else:
+                # Ending a code block
+                test_chunk = current_chunk + "\n```"
+                if len(test_chunk) > max_length:
+                    chunks.append(current_chunk)
+                    current_chunk = "```"
+                else:
+                    current_chunk = test_chunk
+                in_code_block = False
+        else:
+            test_chunk = current_chunk + line + "\n"
+            if len(test_chunk) > max_length:
+                if in_code_block:
+                    # Close the code block and start a new chunk
+                    chunks.append(current_chunk + "\n```")
+                    current_chunk = f"```{code_block_lang}\n{line}\n"
+                else:
+                    chunks.append(current_chunk)
+                    current_chunk = line + "\n"
+            else:
+                current_chunk = test_chunk
+    
+    if current_chunk:
+        chunks.append(current_chunk)
+    
+    return chunks
+
+
+def _split_regular_message(content: str, max_length: int) -> List[str]:
+    """Split a regular message without code blocks."""
+    chunks = []
+    words = content.split()
+    current_chunk = ""
+    
+    for word in words:
+        test_chunk = current_chunk + " " + word if current_chunk else word
+        if len(test_chunk) > max_length:
+            if current_chunk:
+                chunks.append(current_chunk)
+                current_chunk = word
+            else:
+                # Single word is too long, split it
+                chunks.append(word[:max_length-3] + "...")
+                current_chunk = ""
+        else:
+            current_chunk = test_chunk
+    
+    if current_chunk:
+        chunks.append(current_chunk)
+    
+    return chunks
+
+
 class ConversationStorage:
     """Handles conversation history storage."""
     
@@ -214,13 +313,8 @@ class DiscordBot:
         """Send message, chunking if necessary to fit Discord's character limit."""
         max_length = self.config.message.max_length
         
-        if len(content) <= max_length:
-            await channel.send(content)
-            return
-        
-        # Split into chunks
-        chunks = textwrap.wrap(content, max_length, break_long_words=False, 
-                              break_on_hyphens=False)
+        # Use the new formatting utility
+        chunks = format_message_for_discord(content, max_length)
         
         for chunk in chunks:
             await channel.send(chunk)

@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 from pydantic import BaseModel, Field, validator
 import logging
+from dotenv import load_dotenv
 
 
 class BotConfig(BaseModel):
@@ -84,6 +85,11 @@ def expand_env_vars(data: Any) -> Any:
 
 def load_config(config_path: str) -> Config:
     """Load configuration from YAML file with environment variable expansion."""
+    # Load .env file if it exists (looks for .env in current working directory)
+    env_file = Path('.env')
+    if env_file.exists():
+        load_dotenv(env_file)
+    
     config_file = Path(config_path)
     
     if not config_file.exists():
