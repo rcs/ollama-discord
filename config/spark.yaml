@@ -6,7 +6,7 @@ bot:
   description: "A creative catalyst who ignites imagination and generates innovative ideas"
   
 discord:
-  token: "${DISCORD_TOKEN_SPARK}"
+  token: "${DISCORD_TOKEN}"
   command_prefix: "!spark"
   
 ollama:

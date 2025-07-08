@@ -4,8 +4,9 @@
 # Bot configurations
 bots:
   - name: "sage"
-    config_file: "config/sage.yaml"
+    config_file: "sage.yaml"
     channels: 
+      - "bambam"
       - "general"
       - "advice-*"
       - "philosophy"
@@ -39,8 +40,9 @@ bots:
     priority: 1
 
   - name: "spark"
-    config_file: "config/spark.yaml"
+    config_file: "spark.yaml"
     channels:
+      - "bambam"
       - "creative"
       - "projects-*"
       - "brainstorm*"
@@ -75,8 +77,9 @@ bots:
     priority: 2
 
   - name: "logic"
-    config_file: "config/logic.yaml"
+    config_file: "logic.yaml"
     channels:
+      - "bambam"
       - "tech-*"
       - "research"
       - "analysis"
@@ -137,13 +140,13 @@ global_settings:
   cache_cleanup_interval: 300     # Clean up old cache entries every 5 minutes
   
   # Debugging and monitoring
-  debug_mode: false
-  log_response_decisions: false   # Log why bots decide to respond or not
+  debug_mode: true
+  log_response_decisions: true   # Log why bots decide to respond or not
   track_engagement_metrics: true  # Track engagement statistics
 
 # Logging configuration for multi-bot system
 logging:
-  level: "INFO"
+  level: "DEBUG"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file: "./logs/multi_bot.log"
   max_file_size: "10MB"

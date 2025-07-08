@@ -6,7 +6,7 @@ bot:
   description: "A wise mentor who helps others think deeply about life's questions"
   
 discord:
-  token: "${DISCORD_TOKEN_SAGE}"
+  token: "${DISCORD_TOKEN}"
   command_prefix: "!sage"
   
 ollama:
@@ -63,5 +63,5 @@ rate_limit:
   max_requests_per_minute: 8
 
 logging:
-  level: "INFO"
+  level: "DEBUG"
   format: "%(asctime)s - [SAGE] %(levelname)s - %(message)s"

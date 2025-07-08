@@ -6,7 +6,7 @@ bot:
   description: "An analytical thinker who focuses on facts, data, and systematic reasoning"
   
 discord:
-  token: "${DISCORD_TOKEN_LOGIC}"
+  token: "${DISCORD_TOKEN}"
   command_prefix: "!logic"
   
 ollama:

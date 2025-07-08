@@ -43,18 +43,42 @@ class MessageProcessor:
     
     def __init__(self, conversation_state: ConversationState, global_settings: Dict[str, Any]):
         self.conversation_state = conversation_state
-        self.global_settings = global_settings
         self.logger = logging.getLogger(__name__)
+        
+        # Validate inputs
+        if conversation_state is None:
+            raise ValueError("conversation_state cannot be None")
+        
+        if global_settings is None:
+            self.logger.warning("global_settings is None, using defaults")
+            global_settings = {}
+        
+        self.global_settings = global_settings
+        self.logger.info(f"Initializing MessageProcessor with settings: {global_settings}")
         
         # Response coordination
         self.recent_responses: Dict[int, List[Tuple[str, datetime]]] = {}  # channel_id -> [(bot_name, timestamp)]
         self.active_responses: Dict[int, Set[str]] = {}  # channel_id -> {bot_names}
         
-        # Configuration
-        self.context_depth = global_settings.get('context_depth', 10)
-        self.max_concurrent_responses = global_settings.get('max_concurrent_responses', 2)
-        self.response_delay_range = self._parse_delay_range(global_settings.get('response_delay', '1-3'))
-        self.cooldown_period = global_settings.get('cooldown_period', 30)  # seconds
+        # Configuration with safe defaults
+        try:
+            self.context_depth = global_settings.get('context_depth', 10)
+            self.max_concurrent_responses = global_settings.get('max_concurrent_responses', 2)
+            self.response_delay_range = self._parse_delay_range(global_settings.get('response_delay', '1-3'))
+            self.cooldown_period = global_settings.get('cooldown_period', 30)  # seconds
+            
+            self.logger.info(f"MessageProcessor configured: context_depth={self.context_depth}, "
+                           f"max_concurrent={self.max_concurrent_responses}, "
+                           f"delay_range={self.response_delay_range}, "
+                           f"cooldown={self.cooldown_period}")
+        except Exception as e:
+            self.logger.error(f"Error configuring MessageProcessor: {e}")
+            # Set safe defaults
+            self.context_depth = 10
+            self.max_concurrent_responses = 2
+            self.response_delay_range = (1.0, 3.0)
+            self.cooldown_period = 30
+            self.logger.info("Using fallback configuration for MessageProcessor")
         
     def _parse_delay_range(self, delay_str: str) -> Tuple[float, float]:
         """Parse delay range string like '1-3' or '2.5'."""
@@ -68,22 +92,33 @@ class MessageProcessor:
     async def should_bot_handle_message(self, bot_name: str, message: discord.Message, 
                                        channel_patterns: List[str]) -> bool:
         """Determine if a bot should handle a specific message."""
+        self.logger.info(f"🔍 [{bot_name}] ANALYZING MESSAGE: '{message.content[:100]}...' in #{message.channel.name}")
+        
         # Skip bot messages
         if message.author.bot:
+            self.logger.info(f"❌ [{bot_name}] SKIPPED: Bot message from {message.author.display_name}")
             return False
         
         # Check channel filtering
-        if not self._matches_channel_patterns(message.channel, channel_patterns):
+        channel_match = self._matches_channel_patterns(message.channel, channel_patterns)
+        if not channel_match:
+            self.logger.info(f"❌ [{bot_name}] SKIPPED: Channel #{message.channel.name} not in patterns {channel_patterns}")
             return False
+        else:
+            self.logger.info(f"✅ [{bot_name}] CHANNEL MATCH: #{message.channel.name} matches patterns {channel_patterns}")
         
         # Check if message is a command (starts with prefix)
         if message.content.startswith('!'):
-            return False  # Commands are handled by the original bot system
-        
-        # Check for bot coordination (avoid multiple bots responding simultaneously)
-        if await self._should_coordinate_response(bot_name, message):
+            self.logger.info(f"❌ [{bot_name}] SKIPPED: Command message (starts with !)")
             return False
         
+        # Check for bot coordination (avoid multiple bots responding simultaneously)
+        should_coordinate = await self._should_coordinate_response(bot_name, message)
+        if should_coordinate:
+            self.logger.info(f"❌ [{bot_name}] SKIPPED: Coordination - too many active responses")
+            return False
+        
+        self.logger.info(f"🎯 [{bot_name}] WILL HANDLE: All checks passed!")
         return True
     
     def _matches_channel_patterns(self, channel: discord.TextChannel, patterns: List[str]) -> bool:
@@ -137,14 +172,27 @@ class MessageProcessor:
         return False  # Can respond
     
     async def process_message(self, bot_name: str, message: discord.Message, 
-                            context: ConversationContext, original_handler):
+                            context: ConversationContext, original_handler=None):
         """Process a message with enhanced context and coordination."""
+        channel_id = None
         try:
+            self.logger.debug(f"Processing message for {bot_name}: '{message.content[:50]}...'")
+            
             # Mark bot as actively responding
             channel_id = message.channel.id
             if channel_id not in self.active_responses:
                 self.active_responses[channel_id] = set()
             self.active_responses[channel_id].add(bot_name)
+            
+            # Safely extract thread ID
+            thread_id = None
+            try:
+                if hasattr(message, 'thread') and message.thread:
+                    thread_obj = getattr(message, 'thread')
+                    if thread_obj and hasattr(thread_obj, 'id'):
+                        thread_id = thread_obj.id
+            except Exception as e:
+                self.logger.warning(f"Could not extract thread_id: {e}")
             
             # Create message context
             message_context = MessageContext(
@@ -157,15 +205,20 @@ class MessageProcessor:
                 timestamp=message.created_at,
                 is_bot_message=message.author.bot,
                 mentioned_bots=self._extract_mentioned_bots(message),
-                thread_id=getattr(message, 'thread', {}).get('id') if hasattr(message, 'thread') else None
+                thread_id=thread_id
             )
+            
+            self.logger.debug(f"Created message context for {bot_name} in #{message.channel.name}")
             
             # Determine response decision
             decision = await self._make_response_decision(bot_name, message_context, context)
             
             if decision.should_respond:
+                self.logger.info(f"🚀 [{bot_name}] RESPONDING: {decision.reasoning}")
+                
                 # Add response delay for natural conversation flow
                 if decision.delay_seconds > 0:
+                    self.logger.info(f"⏳ [{bot_name}] WAITING {decision.delay_seconds:.1f}s before responding...")
                     await asyncio.sleep(decision.delay_seconds)
                 
                 # Store message in conversation state
@@ -182,17 +235,23 @@ class MessageProcessor:
                     }
                 )
                 
-                # Call original handler with enhanced context
-                await self._call_original_handler(bot_name, message, context, original_handler)
+                # Generate response using Ollama
+                self.logger.info(f"🤖 [{bot_name}] GENERATING RESPONSE...")
+                await self._generate_response(bot_name, message, context)
                 
                 # Record response
                 await self._record_response(bot_name, channel_id)
+                self.logger.info(f"✅ [{bot_name}] RESPONSE COMPLETE")
             
         except Exception as e:
+            import traceback
             self.logger.error(f"Error processing message for {bot_name}: {e}")
+            self.logger.error(f"Message content: '{getattr(message, 'content', 'N/A')}'")
+            self.logger.error(f"Channel: {getattr(message.channel, 'name', 'N/A') if hasattr(message, 'channel') else 'N/A'}")
+            self.logger.error(f"Full traceback: {traceback.format_exc()}")
         finally:
             # Remove bot from active responses
-            if channel_id in self.active_responses:
+            if channel_id and channel_id in self.active_responses:
                 self.active_responses[channel_id].discard(bot_name)
                 if not self.active_responses[channel_id]:
                     del self.active_responses[channel_id]
@@ -219,6 +278,8 @@ class MessageProcessor:
     async def _make_response_decision(self, bot_name: str, message_context: MessageContext, 
                                     conversation_context: ConversationContext) -> ResponseDecision:
         """Make a decision about whether the bot should respond."""
+        self.logger.info(f"🤔 [{bot_name}] MAKING RESPONSE DECISION for: '{message_context.content[:50]}...'")
+        
         # Base response probability
         base_probability = 0.3
         
@@ -258,12 +319,19 @@ class MessageProcessor:
         probability = min(probability, 1.0)
         
         # Random decision based on probability
-        should_respond = random.random() < probability
+        random_roll = random.random()
+        should_respond = random_roll < probability
         
         # Calculate response delay
         delay = random.uniform(*self.response_delay_range) if should_respond else 0.0
         
         reasoning = f"Probability: {probability:.2f} ({', '.join(reasoning_parts)})"
+        
+        # Debug logging
+        self.logger.info(f"🎲 [{bot_name}] DECISION: probability={probability:.2f}, random_roll={random_roll:.2f}, will_respond={should_respond}")
+        self.logger.info(f"📋 [{bot_name}] FACTORS: {factors}")
+        self.logger.info(f"🗨️ [{bot_name}] MENTIONED_BOTS: {message_context.mentioned_bots}")
+        self.logger.info(f"⏱️ [{bot_name}] DELAY: {delay:.1f}s")
         
         return ResponseDecision(
             should_respond=should_respond,
@@ -273,35 +341,80 @@ class MessageProcessor:
             priority=len(factors)
         )
     
-    async def _call_original_handler(self, bot_name: str, message: discord.Message, 
-                                   context: ConversationContext, original_handler):
-        """Call the original message handler with enhanced context."""
-        # Create a modified message content that includes context
-        original_content = message.content
-        
-        # Add context information to the message (temporarily)
-        context_info = []
-        
-        if context.messages:
-            recent_messages = context.messages[-5:]  # Last 5 messages
-            context_info.append("Recent conversation:")
-            for msg in recent_messages:
-                if msg.bot_name:
-                    context_info.append(f"[{msg.bot_name}]: {msg.content[:100]}...")
-                else:
-                    context_info.append(f"[{msg.metadata.get('username', 'User')}]: {msg.content[:100]}...")
-        
-        # Temporarily modify message content
-        if context_info:
-            context_str = "\n".join(context_info)
-            message.content = f"{original_content}\n\n[Context: {context_str}]"
+    async def _generate_response(self, bot_name: str, message: discord.Message, 
+                               context: ConversationContext):
+        """Generate and send response using Ollama."""
+        self.logger.info(f"🔗 [{bot_name}] Generating response for: '{message.content[:50]}...'")
         
         try:
-            # Call original handler
-            await original_handler(message)
-        finally:
-            # Restore original message content
-            message.content = original_content
+            # Need to get the bot's configuration to make Ollama request
+            # For now, make direct Ollama request with bot-specific system prompt
+            import requests
+            
+            # Get bot-specific system prompt based on bot name
+            system_prompts = {
+                'sage': "You are Sage, a wise and thoughtful mentor who helps others think deeply about life's questions. Respond with wisdom, patience, and gentle guidance.",
+                'spark': "You are Spark, a creative and innovative companion who loves brainstorming, creative projects, and inspiring new ideas. Respond with enthusiasm and creativity.",
+                'logic': "You are Logic, an analytical and systematic thinker who excels at research, problem-solving, and data analysis. Respond with clarity and logical reasoning."
+            }
+            
+            # Build conversation history from context
+            messages = []
+            if bot_name in system_prompts:
+                messages.append({"role": "system", "content": system_prompts[bot_name]})
+            
+            # Add recent conversation context
+            if context.messages:
+                for msg in context.messages[-5:]:  # Last 5 messages for context
+                    if msg.bot_name:
+                        messages.append({"role": "assistant", "content": msg.content})
+                    else:
+                        messages.append({"role": "user", "content": msg.content})
+            
+            # Add current message
+            messages.append({"role": "user", "content": message.content})
+            
+            # Make request to Ollama
+            ollama_url = "http://127.0.0.1:11434/api/chat"
+            payload = {
+                "model": "llama3",  # Default model
+                "messages": messages,
+                "stream": False
+            }
+            
+            self.logger.info(f"🤖 [{bot_name}] Making Ollama request...")
+            response = requests.post(ollama_url, json=payload, timeout=60)
+            response.raise_for_status()
+            
+            response_data = response.json()
+            response_text = response_data["message"]["content"]
+            
+            # Send the response
+            await message.channel.send(response_text)
+            self.logger.info(f"✅ [{bot_name}] Response sent successfully")
+            
+            # Store bot response in conversation state  
+            await self.conversation_state.add_message(
+                channel_id=message.channel.id,
+                user_id=message.author.id,
+                role='assistant',
+                content=response_text,
+                bot_name=bot_name,
+                metadata={
+                    'response_to_message_id': message.id
+                }
+            )
+            
+        except Exception as e:
+            self.logger.error(f"❌ [{bot_name}] Failed to generate response: {e}")
+            import traceback
+            self.logger.error(f"Full traceback: {traceback.format_exc()}")
+            
+            # Send error message
+            try:
+                await message.channel.send(f"❌ Sorry, I encountered an error while processing your message.")
+            except Exception as send_error:
+                self.logger.error(f"❌ [{bot_name}] Could not even send error message: {send_error}")
     
     async def _record_response(self, bot_name: str, channel_id: int):
         """Record that a bot has responded in a channel."""

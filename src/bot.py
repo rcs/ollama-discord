@@ -204,11 +204,12 @@ class RateLimiter:
 class DiscordBot:
     """Discord bot with Ollama integration and configuration support."""
     
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, custom_message_handler=None):
         self.config = config
         self.logger = setup_logging(config.logging, config.bot.name)
         self.storage = ConversationStorage(config)
         self.rate_limiter = RateLimiter(config)
+        self.custom_message_handler = custom_message_handler
         
         # Setup Discord client
         intents = discord.Intents.default()
@@ -227,7 +228,14 @@ class DiscordBot:
     
     async def on_message(self, message: discord.Message):
         """Handle incoming Discord messages."""
-        # Ignore bot messages and messages not starting with command prefix
+        # If there's a custom message handler, use it first
+        if self.custom_message_handler:
+            # Let the custom handler decide what to do
+            handled = await self.custom_message_handler(message)
+            if handled:
+                return
+        
+        # Default behavior: Ignore bot messages and messages not starting with command prefix
         if message.author.bot or not message.content.startswith(self.config.discord.command_prefix):
             return
         
