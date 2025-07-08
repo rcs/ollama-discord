@@ -72,15 +72,12 @@ class TestDiscordBot:
         )
     
     @pytest.mark.asyncio
-    async def test_on_message_with_custom_handler(self):
-        """Test message handling with custom handler."""
+    async def test_on_message_direct_orchestrator_call(self):
+        """Test message handling goes directly to orchestrator."""
         config = self.create_test_config()
-        mock_orchestrator = Mock(spec=BotOrchestrator)
+        mock_orchestrator = AsyncMock(spec=BotOrchestrator)
         
-        # Mock custom handler that returns True (handled)
-        custom_handler = AsyncMock(return_value=True)
-        
-        bot = DiscordBot(config, orchestrator=mock_orchestrator, custom_message_handler=custom_handler)
+        bot = DiscordBot(config, orchestrator=mock_orchestrator, channel_patterns=["general"])
         
         # Mock Discord message
         mock_message = Mock()
@@ -89,8 +86,10 @@ class TestDiscordBot:
         # Call on_message
         await bot.on_message(mock_message)
         
-        # Verify custom handler was called
-        custom_handler.assert_called_once_with(mock_message)
+        # Verify orchestrator was called directly
+        mock_orchestrator.process_message.assert_called_once_with(
+            "test-bot", mock_message, ["general"]
+        )
 
 
 class TestConfig:

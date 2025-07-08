@@ -111,11 +111,10 @@ class DiscordBot:
     """Discord bot with Ollama integration - Multi-bot architecture only."""
     
     def __init__(self, config: Config, orchestrator: BotOrchestrator, 
-                 custom_message_handler=None, channel_patterns: Optional[List[str]] = None):
+                 channel_patterns: Optional[List[str]] = None):
         self.config = config
         self.logger = setup_logging(config.logging, config.bot.name)
         self.orchestrator = orchestrator
-        self.custom_message_handler = custom_message_handler
         self.channel_patterns = channel_patterns or []
         
         # Setup Discord client
@@ -129,35 +128,19 @@ class DiscordBot:
         
         self.logger.info(f"Bot '{config.bot.name}' initialized")
     
-    async def on_ready(self):
+    async def on_ready(self) -> None:
         """Called when the bot is ready."""
         self.logger.info(f"Bot '{self.config.bot.name}' logged in as {self.client.user}")
     
-    async def on_message(self, message: discord.Message):
+    async def on_message(self, message: discord.Message) -> None:
         """Handle incoming Discord messages."""
-        # If there's a custom message handler, use it first
-        if self.custom_message_handler:
-            # Let the custom handler decide what to do
-            handled = await self.custom_message_handler(message)
-            if handled:
-                return
-        
         # Use orchestrator for message processing
         await self.orchestrator.process_message(
             self.config.bot.name, message, self.channel_patterns
         )
     
-    async def send_chunked_message(self, channel, content: str):
-        """Send message, chunking if necessary to fit Discord's character limit."""
-        max_length = self.config.message.max_length
-        
-        # Use the new formatting utility
-        chunks = format_message_for_discord(content, max_length)
-        
-        for chunk in chunks:
-            await channel.send(chunk)
     
-    def run(self):
+    def run(self) -> None:
         """Start the Discord bot."""
         self.logger.info(f"Starting bot '{self.config.bot.name}'...")
         self.client.run(self.config.discord.token)
