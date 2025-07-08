@@ -8,7 +8,8 @@ from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 from datetime import datetime
 
-from src.bot_manager import BotManager, BotInstance, MultiBotConfig
+from src.bot_manager import BotManager, BotInstance
+from src.multi_bot_config import MultiBotConfig, BotInstanceConfig, GlobalSettings
 from src.config import load_config
 from src.service_factory import create_multi_bot_services
 
@@ -99,23 +100,33 @@ class TestMultiBotConfig:
     """Test MultiBotConfig dataclass."""
     
     def test_multibot_config_creation(self):
-        """Test creating MultiBotConfig from dictionary."""
-        data = {
-            'bots': [{'name': 'test', 'config_file': 'test.yaml', 'channels': ['test']}],
-            'global_settings': {'context_depth': 10}
-        }
+        """Test creating MultiBotConfig with proper Pydantic models."""
+        bot_config = BotInstanceConfig(
+            name='test',
+            config_file='test.yaml',
+            channels=['test']
+        )
+        global_settings = GlobalSettings(context_depth=10)
         
-        config = MultiBotConfig.from_dict(data)
+        config = MultiBotConfig(
+            bots=[bot_config],
+            global_settings=global_settings
+        )
         assert len(config.bots) == 1
-        assert config.bots[0]['name'] == 'test'
-        assert config.global_settings['context_depth'] == 10
+        assert config.bots[0].name == 'test'
+        assert config.global_settings.context_depth == 10
     
     def test_multibot_config_defaults(self):
         """Test MultiBotConfig with default values."""
-        data = {}
-        config = MultiBotConfig.from_dict(data)
-        assert config.bots == []
-        assert config.global_settings == {}
+        bot_config = BotInstanceConfig(
+            name='test',
+            config_file='test.yaml',
+            channels=['test']
+        )
+        
+        config = MultiBotConfig(bots=[bot_config])  # global_settings gets default
+        assert len(config.bots) == 1
+        assert config.global_settings.context_depth == 10  # default value
 
 
 class TestBotManager:
@@ -139,29 +150,8 @@ class TestBotManager:
         assert 'test-bot' in bot_manager.bot_instances
     
     @pytest.mark.asyncio
-    async def test_load_config_file_yaml(self, temp_config_dir):
-        """Test loading YAML configuration file."""
-        config_dir, multi_config_file = temp_config_dir
-        manager = BotManager(str(multi_config_file))
-        
-        data = manager._load_config_file(multi_config_file)
-        assert 'bots' in data
-        assert 'global_settings' in data
     
-    def test_load_config_file_not_found(self, bot_manager):
-        """Test loading non-existent configuration file."""
-        with pytest.raises(FileNotFoundError):
-            bot_manager._load_config_file(Path("nonexistent.yaml"))
     
-    def test_load_config_file_invalid_format(self, temp_config_dir):
-        """Test loading configuration file with invalid format."""
-        config_dir, _ = temp_config_dir
-        invalid_file = config_dir / "invalid.txt"
-        invalid_file.write_text("not a config file")
-        
-        manager = BotManager("dummy")
-        with pytest.raises(ValueError, match="Unsupported configuration file format"):
-            manager._load_config_file(invalid_file)
     
     @pytest.mark.asyncio
     async def test_load_bot_configurations(self, bot_manager):
@@ -348,9 +338,9 @@ class TestBotManagerIntegration:
         
         manager = BotManager(str(invalid_config_file))
         
-        # Should not raise exception, but should log error and skip invalid bot
-        await manager.initialize()
-        assert len(manager.bot_instances) == 0  # No valid bots loaded
+        # Should raise exception for invalid bot config files (strict validation)
+        with pytest.raises(FileNotFoundError, match="Bot configuration file not found"):
+            await manager.initialize()
 
 
 if __name__ == "__main__":

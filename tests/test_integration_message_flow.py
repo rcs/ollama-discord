@@ -12,7 +12,8 @@ from typing import Dict, Any
 from src.message_processor import MessageProcessor
 from src.domain_services import MessageContext, ResponseDecision
 from src.conversation_state import ConversationState, ConversationContext
-from src.bot_manager import BotManager, MultiBotConfig
+from src.bot_manager import BotManager
+from src.multi_bot_config import MultiBotConfig, BotInstanceConfig, GlobalSettings
 
 
 class MockDiscordMessage:
@@ -226,14 +227,30 @@ class TestEndToEndFlow:
     @pytest.mark.asyncio
     async def test_message_processing_pipeline(self, multi_bot_config_data):
         """Test the complete message processing pipeline (with delegation)."""
-        # Create multi-bot config
-        config = MultiBotConfig.from_dict(multi_bot_config_data)
+        # Create multi-bot config using proper Pydantic models
+        bot_config = BotInstanceConfig(
+            name='sage',
+            config_file='sage.yaml',
+            channels=['bambam', 'general', 'advice-*'],
+            enabled=True,
+            priority=1
+        )
+        global_settings = GlobalSettings(
+            context_depth=10,
+            max_concurrent_responses=2,
+            response_delay='1-3',
+            cooldown_period=30
+        )
+        config = MultiBotConfig(
+            bots=[bot_config],
+            global_settings=global_settings
+        )
         
         # Create conversation state
         conv_state = ConversationState(context_depth=10)
         
         # Create message processor
-        processor = MessageProcessor(conv_state, config.global_settings)
+        processor = MessageProcessor(conv_state, global_settings.model_dump())
         
         # Create test message
         message = MockDiscordMessage("Hey sage, what is it?", "bambam")

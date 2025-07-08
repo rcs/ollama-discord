@@ -329,7 +329,7 @@ class MultiBotConfigManager:
             'bot_names': [bot.name for bot in enabled_bots],
             'channel_patterns': list(channel_coverage.keys()),
             'channel_coverage': channel_coverage,
-            'global_settings': multi_bot_config.global_settings.dict(),
+            'global_settings': multi_bot_config.global_settings.model_dump(),
             'potential_conflicts': self.validate_channel_assignments(multi_bot_config)
         }
 

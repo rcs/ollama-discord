@@ -114,7 +114,17 @@ def load_config(config_path: str) -> Config:
 def setup_logging(config: LoggingConfig, bot_name: str) -> logging.Logger:
     """Setup logging with the specified configuration."""
     logger = logging.getLogger(f"ollama-discord.{bot_name}")
-    logger.setLevel(getattr(logging, config.level.upper()))
+    
+    # Map string levels to logging constants
+    level_map = {
+        'DEBUG': logging.DEBUG,
+        'INFO': logging.INFO,
+        'WARNING': logging.WARNING,
+        'ERROR': logging.ERROR,
+        'CRITICAL': logging.CRITICAL
+    }
+    log_level = level_map.get(config.level.upper(), logging.INFO)
+    logger.setLevel(log_level)
     
     # Remove existing handlers
     for handler in logger.handlers[:]:

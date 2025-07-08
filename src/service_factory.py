@@ -5,6 +5,7 @@ from .config import Config
 from .conversation_state import ConversationState
 from .domain_services import MessageCoordinator, ResponseGenerator, BotOrchestrator
 from .adapters import FileMessageStorage, OllamaAI, MemoryRateLimiter, DiscordNotificationSender
+from .multi_bot_config import MultiBotConfig
 
 
 def create_services(config: Config, global_settings: Dict[str, Any] = None):
@@ -47,16 +48,10 @@ def create_services(config: Config, global_settings: Dict[str, Any] = None):
     return orchestrator, coordinator, response_generator
 
 
-def create_multi_bot_services(multi_bot_config):
+def create_multi_bot_services(multi_bot_config: MultiBotConfig):
     """Create services for multi-bot deployment."""
     # Get global settings from multi-bot config
-    global_settings = multi_bot_config.global_settings
-    if hasattr(global_settings, 'model_dump'):
-        global_settings_dict = global_settings.model_dump()
-    elif hasattr(global_settings, 'dict'):
-        global_settings_dict = global_settings.dict()
-    else:
-        global_settings_dict = global_settings or {}
+    global_settings_dict = multi_bot_config.global_settings.model_dump()
     
     # Create shared conversation state
     context_depth = global_settings_dict.get('context_depth', 10)

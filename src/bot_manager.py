@@ -13,6 +13,7 @@ from .config import load_config, BotConfig
 from .conversation_state import ConversationState
 from .message_processor import MessageProcessor
 from .service_factory import create_multi_bot_services
+from .multi_bot_config import MultiBotConfig, multi_bot_config_manager
 
 
 @dataclass
@@ -30,18 +31,6 @@ class BotInstance:
             self.channels = []
 
 
-@dataclass
-class MultiBotConfig:
-    """Configuration for multi-bot deployment."""
-    bots: List[Dict[str, any]]
-    global_settings: Dict[str, any]
-    
-    @classmethod
-    def from_dict(cls, data: Dict) -> 'MultiBotConfig':
-        return cls(
-            bots=data.get('bots', []),
-            global_settings=data.get('global_settings', {})
-        )
 
 
 class BotManager:
@@ -52,7 +41,7 @@ class BotManager:
         self.bot_instances: Dict[str, BotInstance] = {}
         self.conversation_state: Optional[ConversationState] = None
         self.message_processor: Optional[MessageProcessor] = None
-        self.multi_bot_config: Optional[MultiBotConfig] = None
+        self.multi_bot_config: MultiBotConfig
         self.logger = logging.getLogger(__name__)
         self._running = False
         self._tasks: Set[asyncio.Task] = set()
@@ -62,28 +51,13 @@ class BotManager:
         self.logger.info(f"Loading multi-bot configuration from {self.config_file}")
         
         try:
-            # Load multi-bot configuration
-            config_data = self._load_config_file(self.config_file)
-            self.logger.info(f"Loaded config data keys: {list(config_data.keys())}")
-            self.logger.debug(f"Config data: {config_data}")
+            # Load multi-bot configuration using proper Pydantic model
+            self.multi_bot_config = multi_bot_config_manager.load_multi_bot_config(str(self.config_file))
+            self.logger.info(f"Loaded MultiBotConfig with {len(self.multi_bot_config.bots)} bots")
             
-            self.multi_bot_config = MultiBotConfig.from_dict(config_data)
-            self.logger.info(f"Created MultiBotConfig with {len(self.multi_bot_config.bots)} bots")
-            
-            # Check global_settings and convert to dict
-            global_settings = getattr(self.multi_bot_config, 'global_settings', None)
-            if global_settings is None:
-                self.logger.warning("multi_bot_config.global_settings is None!")
-                global_settings_dict = {}
-            else:
-                # Convert Pydantic model to dict for compatibility
-                if hasattr(global_settings, 'model_dump'):
-                    global_settings_dict = global_settings.model_dump()
-                elif hasattr(global_settings, 'dict'):
-                    global_settings_dict = global_settings.dict()
-                else:
-                    global_settings_dict = global_settings
-                self.logger.info(f"Global settings: {global_settings_dict}")
+            # Get global settings as dict for services
+            global_settings_dict = self.multi_bot_config.global_settings.model_dump()
+            self.logger.info(f"Global settings: {global_settings_dict}")
             
             # Create services using factory
             self.orchestrator, self.coordinator, self.response_generator, self.conversation_state = create_multi_bot_services(
@@ -91,7 +65,7 @@ class BotManager:
             )
             self.logger.info("Initialized services using service factory")
             
-            # Create message processor for backwards compatibility
+            # Create message processor
             self.message_processor = MessageProcessor(
                 conversation_state=self.conversation_state,
                 global_settings=global_settings_dict
@@ -116,90 +90,32 @@ class BotManager:
         """Validate the multi-bot configuration."""
         self.logger.info("Validating multi-bot configuration...")
         
-        # Validate bots list
-        if not hasattr(self.multi_bot_config, 'bots') or not self.multi_bot_config.bots:
+        # Validate bots list - Pydantic already validates this during loading
+        if not self.multi_bot_config.bots:
             raise ValueError("No bots configured in multi_bot.yaml")
-        
-        # Validate global_settings
-        if not hasattr(self.multi_bot_config, 'global_settings'):
-            self.logger.warning("No global_settings found, using defaults")
-            self.multi_bot_config.global_settings = {}
-        
-        global_settings = self.multi_bot_config.global_settings
-        # Convert to dict if it's a Pydantic model
-        if hasattr(global_settings, 'model_dump'):
-            global_settings_dict = global_settings.model_dump()
-        elif hasattr(global_settings, 'dict'):
-            global_settings_dict = global_settings.dict()
-        else:
-            global_settings_dict = global_settings
-        
-        # Validate required global settings with defaults
-        defaults = {
-            'context_depth': 10,
-            'max_concurrent_responses': 2,
-            'response_delay': '1-3',
-            'cooldown_period': 30
-        }
-        
-        for key, default_value in defaults.items():
-            if key not in global_settings_dict:
-                self.logger.info(f"Setting default value for {key}: {default_value}")
-                global_settings_dict[key] = default_value
         
         # Validate individual bot configurations
         for i, bot_config in enumerate(self.multi_bot_config.bots):
-            # Convert Pydantic model to dict if needed
-            if hasattr(bot_config, 'model_dump'):
-                bot_dict = bot_config.model_dump()
-            elif hasattr(bot_config, 'dict'):
-                bot_dict = bot_config.dict()
-            else:
-                bot_dict = bot_config
-            
-            if not isinstance(bot_dict, dict):
-                raise ValueError(f"Bot configuration {i} is not a dictionary")
-            
+            # Bot config is already a proper Pydantic model, access fields directly
             required_fields = ['name', 'config_file', 'channels']
-            for field in required_fields:
-                if field not in bot_dict:
-                    raise ValueError(f"Bot configuration {i} missing required field: {field}")
             
-            # Validate channels list
-            if not isinstance(bot_dict['channels'], list) or not bot_dict['channels']:
-                raise ValueError(f"Bot {bot_dict['name']} must have at least one channel")
+            if not bot_config.name:
+                raise ValueError(f"Bot configuration {i} missing required field: name")
+            if not bot_config.config_file:
+                raise ValueError(f"Bot configuration {i} missing required field: config_file")
+            if not bot_config.channels:
+                raise ValueError(f"Bot {bot_config.name} must have at least one channel")
         
         self.logger.info("Configuration validation completed successfully")
     
-    def _load_config_file(self, config_file: Path) -> Dict:
-        """Load configuration file (YAML or JSON)."""
-        import yaml
-        
-        if not config_file.exists():
-            raise FileNotFoundError(f"Configuration file not found: {config_file}")
-        
-        with open(config_file, 'r') as f:
-            if config_file.suffix.lower() in ['.yaml', '.yml']:
-                return yaml.safe_load(f)
-            elif config_file.suffix.lower() == '.json':
-                return json.load(f)
-            else:
-                raise ValueError(f"Unsupported configuration file format: {config_file.suffix}")
     
     async def _load_bot_configurations(self):
         """Load individual bot configurations."""
         for bot_config in self.multi_bot_config.bots:
-            # Convert Pydantic model to dict if needed
-            if hasattr(bot_config, 'model_dump'):
-                bot_dict = bot_config.model_dump()
-            elif hasattr(bot_config, 'dict'):
-                bot_dict = bot_config.dict()
-            else:
-                bot_dict = bot_config
-            
-            bot_name = bot_dict.get('name')
-            config_file = bot_dict.get('config_file')
-            channels = bot_dict.get('channels', [])
+            # Bot config is already a proper Pydantic model, access fields directly
+            bot_name = bot_config.name
+            config_file = bot_config.config_file
+            channels = bot_config.channels
             
             if not bot_name or not config_file:
                 self.logger.warning(f"Skipping invalid bot configuration: {bot_config}")
